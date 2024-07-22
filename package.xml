@@ -12,6 +12,8 @@
  <buildtool_depend>ament_cmkae_python</buildtool_depend>
  <depend>rclpy</depend>
 
+ <exec_depend>ros2launch</exec_depend>
+
 
  <!-- take out test depends on if not needed -->
 <!-- <test_depend>ament_copyright</test_depend>-->
