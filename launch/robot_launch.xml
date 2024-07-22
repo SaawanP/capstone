@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="capstone" exec="brain" name="brain"/>
+  <node pkg="capstone" exec="camera" name="camera"/>
+  <node pkg="capstone" exec="defect_ML" name="defect_ML"/>
+</launch>
