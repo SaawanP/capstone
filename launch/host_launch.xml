@@ -1,5 +1,5 @@
 <!-- https://design.ros2.org/articles/roslaunch_xml.html -->
 <launch>
-  <node pkg="capstone" exec="controller"/>
-  <node pkg="capstone" exec="video_feed"/>
+  <node pkg="capstone" exec="video_feed" name="video_feed"/>
+  <node pkg="joy" exec="joy_node" name="joy_node"/>
 </launch>

@@ -2,4 +2,5 @@
   <node pkg="capstone" exec="brain" name="brain"/>
   <node pkg="capstone" exec="camera" name="camera"/>
   <node pkg="capstone" exec="defect_ML" name="defect_ML"/>
+  <node pkg="capstone" exec="motor_controller" name="motor_controller"/>
 </launch>
