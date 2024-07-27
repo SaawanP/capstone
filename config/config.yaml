@@ -1,9 +1,0 @@
-#Example for a node below
-node_1:
-  ros__parameters:
-    some_text: "abc"
-    int_number: 27
-    float_param: 45.2
-    int_array: [10, 11, 12, 13]
-    nested_param:
-      another_int: 7
