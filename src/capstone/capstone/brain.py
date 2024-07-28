@@ -14,7 +14,8 @@ class Brain(Node):
 
     def __init__(self):
         super().__init__('brain')
-        self.JOY_RANGE = 30000
+        self.JOY_RANGE = 30000  # TODO fix numbers
+        self.DEADBAND = 10
 
         # Subscribers and publishers
         self.joy_sub = self.create_subscription(
@@ -37,15 +38,19 @@ class Brain(Node):
             return
 
         self.state = self.MANUAL
-        robot_speed = Speed()
-        robot_speed.x = msg.axes[0] / self.JOY_RANGE  # TODO fix index
-        robot_speed.y = msg.axes[0] / self.JOY_RANGE
+        robot_speed = Speed()  # TODO fix index
+        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+            robot_speed.x = msg.axes[0] / self.JOY_RANGE
+        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+            robot_speed.y = msg.axes[0] / self.JOY_RANGE
         robot_speed.dist = math.sqrt(robot_speed.x ** 2 + robot_speed.y ** 2)
         self.robot_speed_pub.publish(robot_speed)
 
-        camera_speed = Speed()
-        camera_speed.x = msg.axes[0] / self.JOY_RANGE  # TODO fix index
-        camera_speed.y = msg.axes[0] / self.JOY_RANGE
+        camera_speed = Speed()  # TODO fix index
+        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+            camera_speed.x = msg.axes[0] / self.JOY_RANGE
+        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+            camera_speed.y = msg.axes[0] / self.JOY_RANGE
         camera_speed.dist = math.sqrt(camera_speed.x ** 2 + camera_speed.y ** 2)
         self.camera_speed_pub.publish(camera_speed)
 
