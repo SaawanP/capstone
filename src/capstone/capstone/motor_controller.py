@@ -8,6 +8,7 @@ import RPi.GPIO as GPIO
 from robot_interface.msg import Speed
 from motor import Motor, PID
 
+
 class MotorController(Node):
     def __init__(self):
         super().__init__('motor_controller')
@@ -22,10 +23,9 @@ class MotorController(Node):
 
         # Motor setup
         self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_SPEED)
-        self.M2 = Motor(14,15, 16, 17,18, self.MAX_SPEED)
+        self.M2 = Motor(14, 15, 16, 17, 18, self.MAX_SPEED)
         self.left_rpm = 0
         self.right_rpm = 0
-
 
         # PID setup
         timer_period = 0.1  # s TODO find best period

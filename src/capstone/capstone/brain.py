@@ -56,8 +56,10 @@ class Brain(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
     brain = Brain()
-    rclpy.spin(brain)
-    brain.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.init(args=args)
+        rclpy.spin(brain)
+    finally:
+        brain.destroy_node()
+        rclpy.shutdown()

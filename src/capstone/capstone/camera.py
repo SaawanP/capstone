@@ -25,11 +25,13 @@ class Camera(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
     camera = Camera()
-    rclpy.spin(camera)
-    camera.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.init(args=args)
+        rclpy.spin(camera)
+    finally:
+        camera.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
