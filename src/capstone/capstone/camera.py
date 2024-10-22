@@ -6,7 +6,6 @@ from rclpy.node import Node
 from robot_interface.msg import Speed
 
 import depthai as dai
-import open3d as o3d
 from pathlib import Path
 
 
@@ -25,6 +24,7 @@ class Camera(Node):
         self.speed_msg: Speed = Speed()
 
         # Camera Pipeline Setup
+        # TODO set up IMU in pipeline
         FPS = 30
         self.pipeline = dai.Pipeline()
         camRGB = self.pipeline.create(dai.node.ColorCamera)
@@ -32,15 +32,20 @@ class Camera(Node):
         mono_right = self.pipeline.create(dai.node.MonoCamera)
         depth = self.pipeline.create(dai.node.StereoDepth)
         pointcloud = self.pipeline.create(dai.node.PointCloud)
-        sync = self.pipeline.create(dai.node.Sync)
-        xOut = self.pipeline.create(dai.node.XLinkOut)
-        nn = self.pipeline.create(dai.node.NeuralNetwork)
-        cast = self.pipeline.create(dai.node.Cast)
-        nn_xout = self.pipeline.create(dai.node.XLinkOut)
+        nn = self.pipeline.create(dai.node.YoloSpatialDetectionNetwork)
 
+        nn_xout = self.pipeline.create(dai.node.XLinkOut)
+        rgb_xout = self.pipeline.create(dai.node.XLinkOut)
+        pcl_xout = self.pipeline.create(dai.node.XLinkOut)
+
+        nnPath = str((Path(__file__).parent / Path('../models/.blob')).resolve().absolute())  # TODO change to current
+
+        # Camera settings
         camRGB.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         camRGB.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-        camRGB.setIspScale(1, 3)
+        camRGB.setInterleaved(False)
+        camRGB.setPreviewSize(300, 300)  # TODO change to neural network dimensions
+        camRGB.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         camRGB.setFps(FPS)
 
         mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
@@ -50,23 +55,51 @@ class Camera(Node):
         mono_right.setCamera("right")
         mono_right.setFps(FPS)
 
+        # Stereo Settings
         depth.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
         depth.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
         depth.setLeftRightCheck(True)
         depth.setExtendedDisparity(False)
-        depth.setSubpixel(True)
+        depth.setSubpixel(False)
+        depth.setOutputSize(mono_left.getResolutionWidth(), mono_left.getResolutionHeight())
         depth.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+
+        # YOLO settings
+        nn.setBlobPath(nnPath)
+        nn.setConfidenceThreshold(0.5)
+        nn.setNumClasses(80)
+        nn.setCoordinateSize(4)
+        nn.setIouThreshold(0.5)
+        nn.setNumInferenceThreads(2)
+        nn.input.setBlocking(False)
+
+        # Spatial settings
+        nn.setBoundingBoxScaleFactor(0.5)
+        nn.setDepthLowerThreshold(100)
+        nn.setDepthUpperThreshold(5000)
 
         # Pipeline Linking
         mono_left.out.link(depth.left)
         mono_right.out.link(depth.right)
         depth.depth.link(pointcloud.inputDepth)
-        camRGB.isp.link(sync.inputs["rgb"])
-        pointcloud.outputPointCloud.link(sync.inputs["pcl"])
-        sync.out.link(xOut.input)
-        xOut.setStreamName("out")
+        pointcloud.outputPointCloud.link(pcl_xout)
+        camRGB.preview.link(nn.input)
+        depth.depth.link(nn.inputDepth)
+        nn.passthrough.link(rgb_xout.input)
+        nn.out.link(nn_xout.input)
+        rgb_xout.setStreamName("out")
+        nn_xout.setStreamName("nn")
 
-
+        """
+        Linking Diagram:
+        
+                                          ----.out------------->nn_xout
+        camRGB--------------------->nn----|----.passthrough---->rgb_xout
+                               |                            
+        mono_left---|          |                             
+                    --->depth--|-------->pointcloud------------>pcl_xout        
+        mono_right--|                     
+        """
 
     def speed_callback(self, msg):
         self.speed_msg = msg
