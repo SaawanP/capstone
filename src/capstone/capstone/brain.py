@@ -6,12 +6,15 @@ from sensor_msgs.msg import Joy
 from robot_interface.msg import Speed
 
 import math
+from enum import Enum
+
+
+class State(Enum):
+    MANUAL = "Manual"
+    AUTONOMOUS = "Autonomous"
 
 
 class Brain(Node):
-    MANUAL = 'manual'
-    AUTO = 'autonomous'
-
     def __init__(self):
         super().__init__('brain')
         self.JOY_RANGE = 30000  # TODO fix numbers
@@ -28,11 +31,9 @@ class Brain(Node):
         self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
 
         self.state = self.AUTO
+        self.curr_position = [0, 0]  # TODO update using cameras pose
 
     def joy_callback(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.buttons)
-        self.get_logger().info('I heard: "%s"' % msg.axes)
-
         if msg.buttons[0] != 1:  # TODO fix index
             self.state = self.AUTO
             return
