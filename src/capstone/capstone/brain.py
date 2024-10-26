@@ -125,6 +125,7 @@ class Brain(Node):
         speed.dist = self.OPERATIONAL_SPEED / self.MAX_SPEED
         speed.y = math.sin(turn_angle)
         speed.x = math.cos(turn_angle)
+        self.robot_speed_pub.publish(robot_speed)
 
 
 def main(args=None):
