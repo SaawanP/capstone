@@ -2,10 +2,16 @@
 
 import rclpy
 from rclpy.node import Node
+from cv_bridge import CvBridge
+import sensor_msgs.point_cloud2 as pc2
 
 from robot_interface.msg import Speed
+from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
+from geometry_msgs.msg import Point
+from std_msgs.msg import Header
 
 import depthai as dai
+import cv2
 from pathlib import Path
 
 
@@ -13,15 +19,18 @@ class Camera(Node):
     def __init__(self):
         super().__init__('camera')
 
-        # Subscribers and publishers
-        self.speed_sub = self.create_subscription(
-            Speed,
-            'camera_speed',
-            self.speed_callback,
-            10
-        )
+        self.bridge = CvBridge()
 
-        self.speed_msg: Speed = Speed()
+        # Subscribers and publishers
+        self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
+
+        # TODO test using https://wiki.ros.org/image_view
+        self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)
+        self.imu_pub = self.create_publisher(Imu, 'imu', 10)
+        # TODO expand message for more information
+        self.defect_pub = self.create_publisher(Point, 'defect_location', 10)
+        self.pointcloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
+        self.depth_map_pub = self.create_publisher(Image, 'depth_map', 10)
 
         # Camera Pipeline Setup
         # TODO set up IMU in pipeline
@@ -37,6 +46,7 @@ class Camera(Node):
         nn_xout = self.pipeline.create(dai.node.XLinkOut)
         rgb_xout = self.pipeline.create(dai.node.XLinkOut)
         pcl_xout = self.pipeline.create(dai.node.XLinkOut)
+        depth_xout = self.pipeline.create(dai.node.XLinkOut)
 
         nnPath = str((Path(__file__).parent / Path('../models/.blob')).resolve().absolute())  # TODO change to current
 
@@ -81,35 +91,95 @@ class Camera(Node):
         # Pipeline Linking
         mono_left.out.link(depth.left)
         mono_right.out.link(depth.right)
-        depth.depth.link(pointcloud.inputDepth)
-        pointcloud.outputPointCloud.link(pcl_xout)
         camRGB.preview.link(nn.input)
         depth.depth.link(nn.inputDepth)
+        nn.passthroughDepth.link(pointcloud.inputDepth)
+        nn.passthroughDepth.link(depth_xout.input)
         nn.passthrough.link(rgb_xout.input)
         nn.out.link(nn_xout.input)
-        rgb_xout.setStreamName("out")
-        nn_xout.setStreamName("nn")
+        pointcloud.outputPointCloud.link(pcl_xout.input)
+        rgb_xout.setStreamName("rgb")
+        nn_xout.setStreamName("detections")
+        pcl_xout.setStreamName("pcl")
+        depth_xout.setStreamName("depth")
 
         """
         Linking Diagram:
         
-                                          ----.out------------->nn_xout
-        camRGB--------------------->nn----|----.passthrough---->rgb_xout
-                               |                            
-        mono_left---|          |                             
-                    --->depth--|-------->pointcloud------------>pcl_xout        
-        mono_right--|                     
+                                          ----.out-------------------------->nn_xout
+        camRGB--------------------->nn----|----.passthrough----------------->rgb_xout
+                               |          |                  
+        mono_left---|          |          |                  
+                    --->depth--|          --.passthroughDepth-->pointcloud-->pcl_xout        
+        mono_right--|                                         |------------->depth_xout
         """
 
     def speed_callback(self, msg):
-        self.speed_msg = msg
+        pass
+
+    def broadcast_frame(self, frame):
+        ros_image = self.bridge.cv2_to_imgmsg(frame)
+        self.rgb_pub.publish(ros_image)
+
+    def broadcast_defect(self, detection):
+        point = Point()
+        point.x = detection.spatialCoordinates.x
+        point.y = detection.spatialCoordinates.y
+        point.z = detection.spatialCoordinates.z
+        self.defect_pub.publish(point)
+
+    def broadcast_pointcloud_frame(self, pointcloud):
+        header = Header()
+        header.stamp = self.get_clock().now()
+        points = pointcloud.getPoints()
+        fields = [
+            PointField('x', 0, PointField.FLOAT32, 1),
+            PointField('y', 4, PointField.FLOAT32, 1),
+            PointField('z', 8, PointField.FLOAT32, 1),
+        ]
+        ros_pc = pc2.create_cloud(header, fields, points)
+        self.pointcloud_pub.publish(ros_pc)
+
+    def broadcast_depth_map(self, depth_map):
+        ros_image = self.bridge.cv2_to_imgmsg(depth_map)
+        self.depth_map_pub.publish(ros_image)
 
 
 def main(args=None):
+    rclpy.init(args=args)
     camera = Camera()
     try:
-        rclpy.init(args=args)
-        rclpy.spin(camera)
+        with dai.Device(camera.pipeline) as device:
+            q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+            q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+            q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
+            q_depthmap = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+
+            while True:
+                in_detections = q_detections.tryGet()
+                in_rgb = q_RGB.tryGet()
+                in_pointcloud = q_pointcloud.tryGet()
+                in_depthmap = q_depthmap.tryGet()
+
+                if in_rgb:
+                    frame = in_rgb.getCvFrame()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    camera.broadcast_frame(frame)
+
+                if in_detections:
+                    detections = in_detections.detections
+                    for detection in detections:
+                        camera.broadcast_defect(detection)
+
+                if in_pointcloud:
+                    points = in_pointcloud.getPoints()
+                    camera.broadcast_pointcloud_frame(points)
+
+                if in_depthmap:
+                    depth_map = in_depthmap.getFrame()
+                    camera.broadcast_depth_map(depth_map)
+
+                rclpy.spin_once(camera)
     finally:
         camera.destroy_node()
         rclpy.shutdown()
