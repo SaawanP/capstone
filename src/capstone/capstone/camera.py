@@ -20,6 +20,7 @@ class Camera(Node):
         super().__init__('camera')
 
         self.bridge = CvBridge()
+        self.start_time = None
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
@@ -33,7 +34,6 @@ class Camera(Node):
         self.depth_map_pub = self.create_publisher(Image, 'depth_map', 10)
 
         # Camera Pipeline Setup
-        # TODO set up IMU in pipeline
         FPS = 30
         self.pipeline = dai.Pipeline()
         camRGB = self.pipeline.create(dai.node.ColorCamera)
@@ -42,11 +42,13 @@ class Camera(Node):
         depth = self.pipeline.create(dai.node.StereoDepth)
         pointcloud = self.pipeline.create(dai.node.PointCloud)
         nn = self.pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+        imu = self.pipeline.create(dai.node.IMU)
 
         nn_xout = self.pipeline.create(dai.node.XLinkOut)
         rgb_xout = self.pipeline.create(dai.node.XLinkOut)
         pcl_xout = self.pipeline.create(dai.node.XLinkOut)
         depth_xout = self.pipeline.create(dai.node.XLinkOut)
+        imu_xout = self.pipeline.create(dai.node.XLinkOut)
 
         nnPath = str((Path(__file__).parent / Path('../models/.blob')).resolve().absolute())  # TODO change to current
 
@@ -88,6 +90,13 @@ class Camera(Node):
         nn.setDepthLowerThreshold(100)
         nn.setDepthUpperThreshold(5000)
 
+        # IMU settings
+        imu.enableIMUSensor(dai.IMUSensor.LINEAR_ACCELERATION, 400)
+        imu.enableIMUSensor(dai.IMUSensor.ROTATION_VECTOR, 400)
+        imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_RAW, 400)
+        imu.setBatchReportThreshold(1)
+        imu.setMaxBatchReports(10)
+
         # Pipeline Linking
         mono_left.out.link(depth.left)
         mono_right.out.link(depth.right)
@@ -98,10 +107,13 @@ class Camera(Node):
         nn.passthrough.link(rgb_xout.input)
         nn.out.link(nn_xout.input)
         pointcloud.outputPointCloud.link(pcl_xout.input)
+        imu.out.link(imu_xout.input)
+
         rgb_xout.setStreamName("rgb")
         nn_xout.setStreamName("detections")
         pcl_xout.setStreamName("pcl")
         depth_xout.setStreamName("depth")
+        imu_xout.setStreamName("imu")
 
         """
         Linking Diagram:
@@ -112,6 +124,8 @@ class Camera(Node):
         mono_left---|          |          |                  
                     --->depth--|          --.passthroughDepth-->pointcloud-->pcl_xout        
         mono_right--|                                         |------------->depth_xout
+        
+        imu----------------------------------------------------------------->imu_xout
         """
 
     def speed_callback(self, msg):
@@ -144,6 +158,39 @@ class Camera(Node):
         ros_image = self.bridge.cv2_to_imgmsg(depth_map)
         self.depth_map_pub.publish(ros_image)
 
+    def broadcast_imu_data(self, imu_packet):
+        lin_accel_values = imu_packet.linearAcceleration
+        rot_vect_values = imu_packet.rotationVector
+        gyro_values = imu_packet.gyroscope
+
+        lin_accel_time = lin_accel_values.getTimestamp()
+        rot_vect_time = rot_vect_values.getTimestamp()
+        gyro_time = gyro_values.getTimestamp()
+        if self.start_time is None:
+            self.start_time = min(lin_accel_time, rot_vect_time, gyro_time)
+        lin_accel_time = (lin_accel_time - self.start_time).total_seconds()
+        rot_vect_time = (rot_vect_time - self.start_time).total_seconds()
+        gyro_time = (gyro_time - self.start_time).total_seconds()
+        avg_time = (lin_accel_time + rot_vect_time + gyro_time) / 3
+
+        header = Header()
+        header.stamp = rclpy.time.Time(seconds=avg_time)
+
+        imu = Imu()
+        imu.header = header
+        imu.orientation.x = rot_vect_values.i
+        imu.orientation.y = rot_vect_values.j
+        imu.orientation.z = rot_vect_values.k
+        imu.orientation.w = rot_vect_values.real
+        imu.angular_velocity.x = gyro_values.x
+        imu.angular_velocity.y = gyro_values.y
+        imu.angular_velocity.z = gyro_values.z
+        imu.linear_acceleration.x = lin_accel_values.x
+        imu.linear_acceleration.y = lin_accel_values.y
+        imu.linear_acceleration.z = lin_accel_values.z
+
+        self.imu_pub.publish(imu)
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -154,12 +201,14 @@ def main(args=None):
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
             q_depthmap = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+            q_imu = device.getOutputQueue(name="imu", maxSize=4, blocking=False)
 
             while True:
                 in_detections = q_detections.tryGet()
                 in_rgb = q_RGB.tryGet()
                 in_pointcloud = q_pointcloud.tryGet()
                 in_depthmap = q_depthmap.tryGet()
+                in_imu = q_imu.tryGet()
 
                 if in_rgb:
                     frame = in_rgb.getCvFrame()
@@ -178,6 +227,11 @@ def main(args=None):
                 if in_depthmap:
                     depth_map = in_depthmap.getFrame()
                     camera.broadcast_depth_map(depth_map)
+
+                if in_imu:
+                    imu_packets = in_imu.packets
+                    for imu_packet in imu_packets:
+                        camera.broadcast_imu_data(imu_packet)
 
                 rclpy.spin_once(camera)
     finally:
