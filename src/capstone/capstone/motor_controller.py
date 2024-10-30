@@ -114,6 +114,8 @@ def main(args=None):
         rclpy.init(args=args)
         rclpy.spin(motor_controller)
     finally:
+        motor_controller.M1.shutdown()
+        motor_controller.M2.shutdown()
         motor_controller.destroy_node()
         rclpy.shutdown()
         GPIO.cleanup()

@@ -14,6 +14,9 @@ import depthai as dai
 import cv2
 from pathlib import Path
 
+from motor import Servo
+import RPi.GPIO as GPIO
+
 
 class Camera(Node):
     def __init__(self):
@@ -21,6 +24,12 @@ class Camera(Node):
 
         self.bridge = CvBridge()
         self.start_time = None
+
+        # Servo setup
+        self.MAX_CAMERA_SPEED = 5  # degrees/sec
+        self.servo_x = Servo(10)  # TODO change pin
+        self.servo_y = Servo(11)
+        self.last_servo_move = self.get_clock().now()
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
@@ -129,7 +138,23 @@ class Camera(Node):
         """
 
     def speed_callback(self, msg):
-        pass
+        dt = self.get_clock().now() - self.last_servo_move
+
+        if msg.dist == -1:  # Reset servos to neutral position
+            self.servo_x.reset()
+            self.servo_y.reset()
+
+        x_speed = self.MAX_CAMERA_SPEED * msg.x
+        y_speed = self.MAX_CAMERA_SPEED * msg.y
+
+        dx = x_speed * dt
+        dy = y_speed * dt
+
+        x = self.servo_x.angle + dx
+        y = self.servo_y.angle + dy
+
+        self.servo_x.set_angle(x)
+        self.servo_y.set_angle(y)
 
     def broadcast_frame(self, frame):
         ros_image = self.bridge.cv2_to_imgmsg(frame)
@@ -196,6 +221,7 @@ def main(args=None):
     rclpy.init(args=args)
     camera = Camera()
     try:
+        GPIO.setmode(GPIO.BOARD)
         with dai.Device(camera.pipeline) as device:
             q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)

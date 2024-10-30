@@ -76,6 +76,9 @@ class Motor:
             GPIO.output(self.in1, 0)
             GPIO.output(self.in2, 1)
 
+    def shutdown(self):
+        self.pwm.stop()
+
 
 class PID:
     def __init__(self, M: Motor, period, kp=1, kd=0, ki=0, e_prev=0, e_integral=0, tracking_name: Optional[str] = None):
@@ -144,3 +147,24 @@ class PID:
 
         # Set the motor speed
         self.M.set_speed(x)
+
+
+class Servo:
+    def __init__(self, pin):
+        self.pin = pin
+        GPIO.setup(self.pin, GPIO.OUT)
+        GPIO.output(self.pin, 1)
+        self.pwm = GPIO.PWM(self.pin, 50)
+        self.pwm.start(7)  # Start servo at 90 degrees
+        self.angle = 90
+
+    def set_angle(self, angle):
+        self.angle = angle
+        duty = angle / 18 + 2
+        self.pwm.ChangeDutyCycle(duty)
+
+    def reset(self):
+        self.set_angle(90)
+
+    def shutdown(self):
+        self.pwm.stop()

@@ -45,14 +45,13 @@ class Brain(Node):
         self.last_imu_msg = Imu()
         self.last_imu_msg.header.stamp = self.get_clock().now()
 
-
     def joy_callback(self, msg: Joy):
         if msg.buttons[0] != 1:  # TODO fix index
             self.state = State.AUTONOMOUS
             return
 
         self.state = State.MANUAL
-        # All values are 0 to 1
+        # All values are -1 to 1
         robot_speed = Speed()  # TODO fix index
         if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
             robot_speed.x = msg.axes[0] / self.JOY_RANGE
@@ -125,7 +124,11 @@ class Brain(Node):
         speed.dist = self.OPERATIONAL_SPEED / self.MAX_SPEED
         speed.y = math.sin(turn_angle)
         speed.x = math.cos(turn_angle)
-        self.robot_speed_pub.publish(robot_speed)
+        self.robot_speed_pub.publish(speed)
+
+        camera_speed = Speed()
+        camera_speed.dist = -1  # Reset to neutral position
+        self.camera_speed_pub.publish(camera_speed)
 
 
 def main(args=None):
