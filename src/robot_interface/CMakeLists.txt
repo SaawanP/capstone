@@ -17,6 +17,7 @@ find_package(${dpd} REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/Speed.msg"
+    "msg/Speed.msg"
     DEPENDENCIES ${dpd}
 )
 

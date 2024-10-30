@@ -5,9 +5,8 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 
-from robot_interface.msg import Speed
+from robot_interface.msg import Speed, Defect
 from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
-from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 
 import depthai as dai
@@ -24,6 +23,7 @@ class Camera(Node):
 
         self.bridge = CvBridge()
         self.start_time = None
+        self.seen_defects = []
 
         # Servo setup
         self.MAX_CAMERA_SPEED = 5  # degrees/sec
@@ -37,8 +37,7 @@ class Camera(Node):
         # TODO test using https://wiki.ros.org/image_view
         self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)
         self.imu_pub = self.create_publisher(Imu, 'imu', 10)
-        # TODO expand message for more information
-        self.defect_pub = self.create_publisher(Point, 'defect_location', 10)
+        self.defect_pub = self.create_publisher(Defect, 'defect_location', 10)
         self.pointcloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
         self.depth_map_pub = self.create_publisher(Image, 'depth_map', 10)
 
@@ -138,7 +137,9 @@ class Camera(Node):
         """
 
     def speed_callback(self, msg):
-        dt = self.get_clock().now() - self.last_servo_move
+        now = self.get_clock().now()
+        dt = now - self.last_servo_move
+        self.last_servo_move = now
 
         if msg.dist == -1:  # Reset servos to neutral position
             self.servo_x.reset()
@@ -160,12 +161,64 @@ class Camera(Node):
         ros_image = self.bridge.cv2_to_imgmsg(frame)
         self.rgb_pub.publish(ros_image)
 
-    def broadcast_defect(self, detection):
-        point = Point()
-        point.x = detection.spatialCoordinates.x
-        point.y = detection.spatialCoordinates.y
-        point.z = detection.spatialCoordinates.z
-        self.defect_pub.publish(point)
+    def broadcast_defect(self, detection, frame):
+        def get_closest_seen_defect(pt):
+            def manhattan_distance(p1, p2):
+                x = abs(p1[0] - p2[0])
+                y = abs(p1[1] - p2[1])
+                z = abs(p1[2] - p2[2])
+                return x + y + z
+
+            if len(self.seen_defects) == 0:
+                return -1, -1
+            i = min(range(len(self.seen_defects)), key=lambda a: manhattan_distance(self.seen_defects[a], pt))
+            distance = manhattan_distance(self.seen_defects[i], pt)
+            return i, distance
+
+        def is_near_frame_edge():
+            # TODO Change thresholds
+            # top edge
+            if detection.ymin < 0.05 and detection.ymax < 0.1:
+                return True
+            # bottom edge
+            if detection.ymax > 0.95 and detection.ymin > 0.9:
+                return True
+            # left edge
+            if detection.xmin < 0.05 and detection.xmax < 0.1:
+                return True
+            # right edge
+            if detection.xmax < 0.95 and detection.xmin > 0.9:
+                return True
+
+            return False
+
+        point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
+        ind, dist = get_closest_seen_defect(point)
+        if dist < 0.5 and ind != -1:  # TODO fix threshold value
+            self.seen_defects[ind] = point
+            if is_near_frame_edge():
+                del self.seen_defects[ind]
+            return frame
+
+        defect = Defect()
+        defect.location.x = detection.spatialCoordinates.x
+        defect.location.y = detection.spatialCoordinates.y
+        defect.location.z = detection.spatialCoordinates.z
+
+        height = frame.shape[0]
+        width = frame.shape[1]
+        # Denormalize bounding box
+        x1 = int(detection.xmin * width)
+        x2 = int(detection.xmax * width)
+        y1 = int(detection.ymin * height)
+        y2 = int(detection.ymax * height)
+        roi = frame[y1:y2, x1:x2]
+        defect.image = self.bridge.cv2_to_imgmsg(roi)
+        self.defect_pub.publish(defect)
+
+        # Add bounding box to rbg image
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
+        return frame
 
     def broadcast_pointcloud_frame(self, pointcloud):
         header = Header()
@@ -230,34 +283,30 @@ def main(args=None):
             q_imu = device.getOutputQueue(name="imu", maxSize=4, blocking=False)
 
             while True:
-                in_detections = q_detections.tryGet()
-                in_rgb = q_RGB.tryGet()
-                in_pointcloud = q_pointcloud.tryGet()
-                in_depthmap = q_depthmap.tryGet()
-                in_imu = q_imu.tryGet()
+                in_detections = q_detections.get()
+                in_rgb = q_RGB.get()
+                in_pointcloud = q_pointcloud.get()
+                in_depthmap = q_depthmap.get()
+                in_imu = q_imu.get()
 
-                if in_rgb:
-                    frame = in_rgb.getCvFrame()
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    camera.broadcast_frame(frame)
+                frame = in_rgb.getCvFrame()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                if in_detections:
-                    detections = in_detections.detections
-                    for detection in detections:
-                        camera.broadcast_defect(detection)
+                detections = in_detections.detections
+                for detection in detections:
+                    frame = camera.broadcast_defect(detection, frame)
 
-                if in_pointcloud:
-                    points = in_pointcloud.getPoints()
-                    camera.broadcast_pointcloud_frame(points)
+                camera.broadcast_frame(frame)
 
-                if in_depthmap:
-                    depth_map = in_depthmap.getFrame()
-                    camera.broadcast_depth_map(depth_map)
+                points = in_pointcloud.getPoints()
+                camera.broadcast_pointcloud_frame(points)
 
-                if in_imu:
-                    imu_packets = in_imu.packets
-                    for imu_packet in imu_packets:
-                        camera.broadcast_imu_data(imu_packet)
+                depth_map = in_depthmap.getFrame()
+                camera.broadcast_depth_map(depth_map)
+
+                imu_packets = in_imu.packets
+                for imu_packet in imu_packets:
+                    camera.broadcast_imu_data(imu_packet)
 
                 rclpy.spin_once(camera)
     finally:

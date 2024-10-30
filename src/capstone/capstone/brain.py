@@ -4,9 +4,9 @@ from rclpy.node import Node
 import sensor_msgs.point_cloud2 as pc2
 
 from sensor_msgs.msg import Joy
-from robot_interface.msg import Speed
+from robot_interface.msg import Speed, Defect
 from sensor_msgs.msg import Imu, Image, PointCloud2
-from geometry_msgs.msg import Point, Vector3
+from geometry_msgs.msg import Vector3
 
 import math
 import numpy as np
@@ -26,12 +26,11 @@ class Brain(Node):
         self.MAX_SPEED = 70  # m/min
         self.OPERATIONAL_SPEED = 20  # m/min
 
-
         # Subscribers and publishers
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
         self.imu_sub = self.create_subscription(Imu, 'imu', self.imu_callback, 10)
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
-        self.defect_sub = self.create_subscription(Point, 'defect_location', self.defect_location_callback, 10)
+        self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
         self.depth_sub = self.create_subscription(Image, 'depth_map', self.autonomous_callback, 10)
 
         self.robot_speed_pub = self.create_publisher(Speed, 'robot_speed', 10)
@@ -39,7 +38,7 @@ class Brain(Node):
 
         self.state = self.AUTO
         self.point_cloud = []
-        self.defect_locations : list[Point] = []
+        self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
         self.last_velocity: Vector3 = Vector3()
         self.last_imu_msg = Imu()
@@ -101,10 +100,10 @@ class Brain(Node):
                      point[2] + self.curr_position.z]
             self.point_cloud.append(point)
 
-    def defect_location_callback(self, msg: Point):
-        msg.x += self.curr_position.x
-        msg.y += self.curr_position.y
-        msg.z += self.curr_position.z
+    def defect_location_callback(self, msg):
+        msg.location.x += self.curr_position.x
+        msg.location.y += self.curr_position.y
+        msg.location.z += self.curr_position.z
         self.defect_locations.append(msg)
 
     def autonomous_callback(self, msg: Image):
