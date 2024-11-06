@@ -12,9 +12,9 @@ class Backend(Node):
 
 
 def main(args=None):
+    rclpy.init(args=args)
     backend = Backend()
     try:
-        rclpy.init(args=args)
         rclpy.spin(backend)
     finally:
         backend.destroy_node()

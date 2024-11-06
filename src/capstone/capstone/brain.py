@@ -32,9 +32,11 @@ class Brain(Node):
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
         self.depth_sub = self.create_subscription(Image, 'depth_map', self.autonomous_callback, 10)
+        self.motor_sub = self.create_subscription(Vector3, 'motor_controller_position', self.motor_position_callback,10)
 
         self.robot_speed_pub = self.create_publisher(Speed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
+        self.position_pub = self.create_publisher(Vector3, 'imu_position', 10)
 
         self.state = self.AUTO
         self.point_cloud = []
@@ -87,6 +89,7 @@ class Brain(Node):
         self.curr_position.x += dx
         self.curr_position.y += dy
         self.curr_position.z += dz
+        self.position_pub.publish(self.curr_position)
 
         self.last_velocity.x += dvx
         self.last_velocity.y += dvy
@@ -128,6 +131,12 @@ class Brain(Node):
         camera_speed = Speed()
         camera_speed.dist = -1  # Reset to neutral position
         self.camera_speed_pub.publish(camera_speed)
+
+    def motor_position_callback(self, msg):
+        dx = abs(msg.x - self.curr_position.x)
+        dy = abs(msg.y - self.curr_position.y)
+        dz = abs(msg.z - self.curr_position.z)
+        dist = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
 
 def main(args=None):

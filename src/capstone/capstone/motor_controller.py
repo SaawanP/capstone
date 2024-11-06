@@ -2,14 +2,16 @@
 
 import rclpy
 from rclpy.node import Node
-
 import RPi.GPIO as GPIO
+
+from robot_interface.msg import Speed
+from geometry_msgs.msg import Vector3
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import pandas as pd
+import math
 
-from robot_interface.msg import Speed
 from motor import Motor, PID
 
 
@@ -56,25 +58,26 @@ class MotorController(Node):
         self.Kd = 0.1
         tracking = True
 
+        # Subscribers and publishers
+        self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)
+
+        self.position_pub = self.create_publisher(Vector3, 'motor_controller_position', 10)
+
         # Motor setup
         self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_SPEED, tracking_name="M1" if tracking else None)
         self.M2 = Motor(14, 15, 16, 17, 18, self.MAX_SPEED, tracking_name="M2" if tracking else None)
         self.left_rpm = 0
         self.right_rpm = 0
+        self.angle = 0
+        self.turning_radius = 0
+        self.position = Vector3()
 
         # PID setup
         timer_period = 0.1  # s TODO find best period
         self.PID1 = PID(self.M1, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki, tracking_name="PID1" if tracking else None)
         self.PID2 = PID(self.M2, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki, tracking_name="PID2" if tracking else None)
-        self.timer = self.create_timer(timer_period, self.PID_controller)
-
-        # Subscribers and publishers
-        self.speed_sub = self.create_subscription(
-            Speed,
-            'robot_speed',
-            self.speed_callback,
-            10
-        )
+        self.PID_timer = self.create_timer(timer_period, self.PID_controller)
+        self.pose_timer = self.create_timer(timer_period,lambda:self.pose_estimation(timer_period))
 
         if tracking:
             ani = FuncAnimation(plt.gcf(), speed_monitor, timer_period * 1000)
@@ -88,7 +91,7 @@ class MotorController(Node):
             self.left_rpm = self.right_rpm = speed / self.CIRC
             return
 
-        r = abs(1 / msg.y)  # cm
+        self.turning_radius = r = abs(1 / msg.y)  # cm
         w1 = r / (r + self.WIDTH / 2) * speed / self.CIRC
         w2 = (r + self.WIDTH) / (r + self.WIDTH / 2) * speed / self.CIRC
 
@@ -106,12 +109,40 @@ class MotorController(Node):
         self.PID1.set_target_speed(self.left_rpm)
         self.PID2.set_target_speed(self.right_rpm)
 
+    def pose_estimation(self, dt):
+        left_rpm = self.M1.speed
+        right_rpm = self.M2.speed
+        v = sum(left_rpm, right_rpm) / 2 * self.CIRC
+
+        # Update position
+        self.position.x += math.cos(self.angle) * v * dt
+        self.position.y += math.sin(self.angle) * v * dt
+        self.position_pub.publish(self.position)
+
+        # Update angle
+        if left_rpm > right_rpm:
+            left_turn_radius = self.turning_radius + self.WIDTH
+            right_turn_radius = self.turning_radius
+            direction = 1
+        elif right_rpm > left_rpm:
+            right_turn_radius = self.turning_radius + self.WIDTH
+            left_turn_radius = self.turning_radius
+            direction = -1
+        else:
+            return
+
+        # TODO check if the two w are the simialar
+        left_w = left_rpm / left_turn_radius
+        right_w = right_rpm / right_turn_radius
+        w = direction * sum(left_w, right_w) / 2
+        self.angle += w * dt
+
 
 def main(args=None):
+    rclpy.init(args=args)
     motor_controller = MotorController()
     try:
         GPIO.setmode(GPIO.BOARD)
-        rclpy.init(args=args)
         rclpy.spin(motor_controller)
     finally:
         motor_controller.M1.shutdown()
