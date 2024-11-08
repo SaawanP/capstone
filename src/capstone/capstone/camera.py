@@ -215,6 +215,7 @@ class Camera(Node):
         roi = frame[y1:y2, x1:x2]
         defect.image = self.bridge.cv2_to_imgmsg(roi)
         self.defect_pub.publish(defect)
+        self.seen_defects.append(point)
 
         # Add bounding box to rbg image
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))

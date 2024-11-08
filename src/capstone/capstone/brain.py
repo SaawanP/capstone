@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 
 from sensor_msgs.msg import Joy
@@ -11,6 +12,9 @@ from geometry_msgs.msg import Vector3
 import math
 import numpy as np
 from enum import Enum
+import open3d as o3d
+import cv2
+import yaml
 
 
 class State(Enum):
@@ -39,6 +43,7 @@ class Brain(Node):
         self.position_pub = self.create_publisher(Vector3, 'imu_position', 10)
 
         self.state = self.AUTO
+        self.bridge = CvBridge()
         self.point_cloud = []
         self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
@@ -137,6 +142,27 @@ class Brain(Node):
         dy = abs(msg.y - self.curr_position.y)
         dz = abs(msg.z - self.curr_position.z)
         dist = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+
+    def save_report_to_file(self):
+        # Save pointcloud data
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(self.point_cloud)
+        name = "report.ply"  # Decide whether to use ply or stl
+        o3d.io.write_point_cloud(name, pcd)
+
+        # Save defect images
+        defect = {}
+        for i, d in enumerate(self.defect_locations):
+            location = (d.location.x, d.location.y, d.location.z)
+            image_name = f"crack_{i}.png"
+            cv_image = self.bridge.imgmsg_to_cv2(d.image)
+            cv2.imwrite(image_name, cv_image)
+            defect[location] = image_name
+
+        # Save yaml
+        yaml_name = "defects.yaml"
+        with open(yaml_name, 'w') as f:
+            yaml.dump(defect, f)
 
 
 def main(args=None):
