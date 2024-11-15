@@ -144,6 +144,7 @@ class Camera(Node):
         if msg.dist == -1:  # Reset servos to neutral position
             self.servo_x.reset()
             self.servo_y.reset()
+            return
 
         x_speed = self.MAX_CAMERA_SPEED * msg.x
         y_speed = self.MAX_CAMERA_SPEED * msg.y
@@ -194,17 +195,6 @@ class Camera(Node):
 
         point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
         ind, dist = get_closest_seen_defect(point)
-        if dist < 0.5 and ind != -1:  # TODO fix threshold value
-            self.seen_defects[ind] = point
-            if is_near_frame_edge():
-                del self.seen_defects[ind]
-            return frame
-
-        defect = Defect()
-        defect.location.x = detection.spatialCoordinates.x
-        defect.location.y = detection.spatialCoordinates.y
-        defect.location.z = detection.spatialCoordinates.z
-
         height = frame.shape[0]
         width = frame.shape[1]
         # Denormalize bounding box
@@ -212,6 +202,19 @@ class Camera(Node):
         x2 = int(detection.xmax * width)
         y1 = int(detection.ymin * height)
         y2 = int(detection.ymax * height)
+
+        if dist < 0.5 and ind != -1:  # TODO fix threshold value
+            self.seen_defects[ind] = point
+            if is_near_frame_edge():
+                del self.seen_defects[ind]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
+            return frame
+
+        defect = Defect()
+        defect.location.x = detection.spatialCoordinates.x
+        defect.location.y = detection.spatialCoordinates.y
+        defect.location.z = detection.spatialCoordinates.z
+
         roi = frame[y1:y2, x1:x2]
         defect.image = self.bridge.cv2_to_imgmsg(roi)
         self.defect_pub.publish(defect)

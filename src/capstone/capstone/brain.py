@@ -5,7 +5,7 @@ from cv_bridge import CvBridge
 import sensor_msgs.point_cloud2 as pc2
 
 from sensor_msgs.msg import Joy
-from robot_interface.msg import Speed, Defect
+from robot_interface.msg import Speed, Defect, Save
 from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
 
@@ -36,7 +36,8 @@ class Brain(Node):
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
         self.depth_sub = self.create_subscription(Image, 'depth_map', self.autonomous_callback, 10)
-        self.motor_sub = self.create_subscription(Vector3, 'motor_controller_position', self.motor_position_callback,10)
+        self.motor_sub = self.create_subscription(Vector3, 'motor_controller_position', self.motor_position_callback, 10)
+        self.save_sub = self.create_subscription(Save, 'save_report', self.save_report_to_file, 10)
 
         self.robot_speed_pub = self.create_publisher(Speed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
@@ -143,26 +144,28 @@ class Brain(Node):
         dz = abs(msg.z - self.curr_position.z)
         dist = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
-    def save_report_to_file(self):
+    def save_report_to_file(self, msg):
+        folder = msg.save_location + "/" + msg.report_name
+
         # Save pointcloud data
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.point_cloud)
-        name = "report.ply"  # Decide whether to use ply or stl
-        o3d.io.write_point_cloud(name, pcd)
+        pcd_location = folder + "/point_cloud." + msg.point_cloud_save_type
+        o3d.io.write_point_cloud(pcd_location, pcd)
 
         # Save defect images
-        defect = {}
+        defects = {}
         for i, d in enumerate(self.defect_locations):
             location = (d.location.x, d.location.y, d.location.z)
-            image_name = f"crack_{i}.png"
+            image_location = folder + f"/crack_{i}.png"
             cv_image = self.bridge.imgmsg_to_cv2(d.image)
-            cv2.imwrite(image_name, cv_image)
-            defect[location] = image_name
+            cv2.imwrite(image_location, cv_image)
+            defects[location] = image_location
 
         # Save yaml
-        yaml_name = "defects.yaml"
-        with open(yaml_name, 'w') as f:
-            yaml.dump(defect, f)
+        yaml_location = folder + "/defects.yaml"
+        with open(yaml_location, 'w') as f:
+            yaml.dump(defects, f)
 
 
 def main(args=None):

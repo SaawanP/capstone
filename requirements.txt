@@ -1,5 +1,4 @@
 RPi.GPIO
-rclpy
 matplotlib
 numpy
 opencv-python
