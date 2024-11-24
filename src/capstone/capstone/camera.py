@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
-import sensor_msgs.point_cloud2 as pc2
+from sensor_msgs_py import point_cloud2 as pc2
 
 from robot_interface.msg import Speed, Defect
 from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
@@ -13,7 +13,7 @@ import depthai as dai
 import cv2
 from pathlib import Path
 
-from motor import Servo
+from capstone.motor import Servo
 import RPi.GPIO as GPIO
 
 

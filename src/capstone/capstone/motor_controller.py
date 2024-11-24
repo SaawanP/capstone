@@ -2,7 +2,6 @@
 
 import rclpy
 from rclpy.node import Node
-import RPi.GPIO as GPIO
 
 from robot_interface.msg import Speed
 from geometry_msgs.msg import Vector3
@@ -12,7 +11,8 @@ from matplotlib.animation import FuncAnimation
 import pandas as pd
 import math
 
-from motor import Motor, PID
+from capstone.motor import Motor, PID
+import RPi.GPIO as GPIO
 
 
 def speed_monitor():
