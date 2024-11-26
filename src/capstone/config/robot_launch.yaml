@@ -1,0 +1,25 @@
+brain:
+  ros__parameters:
+    joy_range: 30000
+    dead_band: 10
+    max_speed: 70 # m/min, ensure that max_rpm * circ = max_speed
+    operational_speed: 20 # m/min
+
+camera:
+  ros__parameters:
+    max_camera_speed: 5 # degrees/sec
+    fps: 30
+    test_env: True
+
+motor_controller:
+  ros__parameters:
+    max_rpm: 70 # rpm
+    circ: 1.0 # m
+    width: 5.0 # m, width from wheel to wheel
+    tracking: True
+    test_env: True
+
+    # PID parameters
+    Kp: 1.0
+    Ki: 1.0
+    Kd: 1.0

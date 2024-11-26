@@ -21,6 +21,15 @@ class Camera(Node):
     def __init__(self):
         super().__init__('camera')
 
+        # Constants
+        self.declare_parameter('max_camera_speed', 0)
+        self.declare_parameter('fps', 0)
+        self.declare_parameter('test_env', False)
+
+        self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().integer_value
+        self.TEST_ENV = self.get_parameter('test_env').get_parameter_value().bool_value
+        FPS = self.get_parameter('fps').get_parameter_value().integer_value
+
         self.bridge = CvBridge()
         self.start_time = None
         self.seen_defects = []
@@ -42,7 +51,6 @@ class Camera(Node):
         self.depth_map_pub = self.create_publisher(Image, 'depth_map', 10)
 
         # Camera Pipeline Setup
-        FPS = 30
         self.pipeline = dai.Pipeline()
         camRGB = self.pipeline.create(dai.node.ColorCamera)
         mono_left = self.pipeline.create(dai.node.MonoCamera)
@@ -125,14 +133,14 @@ class Camera(Node):
 
         """
         Linking Diagram:
-        
+
                                           ----.out-------------------------->nn_xout
         camRGB--------------------->nn----|----.passthrough----------------->rgb_xout
-                               |          |                  
-        mono_left---|          |          |                  
-                    --->depth--|          --.passthroughDepth-->pointcloud-->pcl_xout        
+                               |          |
+        mono_left---|          |          |
+                    --->depth--|          --.passthroughDepth-->pointcloud-->pcl_xout
         mono_right--|                                         |------------->depth_xout
-        
+
         imu----------------------------------------------------------------->imu_xout
         """
 

@@ -1,5 +1,0 @@
-<launch>
-<!--  <node pkg="capstone" exec="brain" name="brain"/>-->
-<!--  <node pkg="capstone" exec="camera" name="camera"/>-->
-  <node pkg="capstone" exec="motor_controller" name="motor_controller"/>
-</launch>

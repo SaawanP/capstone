@@ -48,15 +48,27 @@ def speed_monitor():
 class MotorController(Node):
     def __init__(self):
         super().__init__('motor_controller')
+
+        # Constants
+        self.declare_parameter('max_rpm', 0)
+        self.declare_parameter('circ', 0.0)
+        self.declare_parameter('width', 0.0)
+        self.declare_parameter('tracking', False)
+        self.declare_parameter('test_env', False)
+        self.declare_parameter('Kp', 0.0)
+        self.declare_parameter('Ki', 0.0)
+        self.declare_parameter('Kd', 0.0)
+
         # TODO move parameters to ROS param
-        self.MAX_RPM = 70  # rpm TODO fix numbers
-        self.CIRC = 1  # m
+        self.MAX_RPM = self.get_parameter('max_rpm').get_parameter_value().integer_value
+        self.CIRC = self.get_parameter('circ').get_parameter_value().double_value
         self.MAX_SPEED = self.MAX_RPM * self.CIRC  # m/min
-        self.WIDTH = 5  # cm
-        self.Kp = 0.8  # TODO tune parameters
-        self.Ki = 0.2
-        self.Kd = 0.1
-        tracking = True
+        self.WIDTH = self.get_parameter('width').get_parameter_value().double_value
+        self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
+        self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
+        self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
+        tracking = self.get_parameter('tracking').get_parameter_value().bool_value
+        self.TEST_ENV = self.get_parameter('test_env').get_parameter_value().bool_value
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)

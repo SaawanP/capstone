@@ -1,5 +1,0 @@
-<!-- https://design.ros2.org/articles/roslaunch_xml.html -->
-<launch>
-  <node pkg="capstone" exec="backend" name="backend"/>
-  <node pkg="joy" exec="joy_node" name="joy_node"/>
-</launch>

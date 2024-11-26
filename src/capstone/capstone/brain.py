@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
@@ -25,10 +26,18 @@ class State(Enum):
 class Brain(Node):
     def __init__(self):
         super().__init__('brain')
-        self.JOY_RANGE = 30000  # TODO fix numbers
-        self.DEADBAND = 10
-        self.MAX_SPEED = 70  # m/min
-        self.OPERATIONAL_SPEED = 20  # m/min
+
+        # Constants
+        self.declare_parameter('joy_range', 0)
+        self.declare_parameter('dead_band', 0)
+        self.declare_parameter('max_speed', 0)
+        self.declare_parameter('operational_speed', 0)
+
+        # TODO fix numbers
+        self.JOY_RANGE = self.get_parameter('joy_range').get_parameter_value().integer_value
+        self.DEAD_BAND = self.get_parameter('dead_band').get_parameter_value().integer_value
+        self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
+        self.OPERATIONAL_SPEED = self.get_parameter('operational_speed').get_parameter_value().integer_value
 
         # Subscribers and publishers
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
@@ -60,17 +69,17 @@ class Brain(Node):
         self.state = State.MANUAL
         # All values are -1 to 1
         robot_speed = Speed()  # TODO fix index
-        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
             robot_speed.x = msg.axes[0] / self.JOY_RANGE
-        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
             robot_speed.y = msg.axes[0] / self.JOY_RANGE
         robot_speed.dist = math.sqrt(robot_speed.x ** 2 + robot_speed.y ** 2)
         self.robot_speed_pub.publish(robot_speed)
 
         camera_speed = Speed()  # TODO fix index
-        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
             camera_speed.x = msg.axes[0] / self.JOY_RANGE
-        if msg.axes[0] > self.DEADBAND or msg.axes < -self.DEADBAND:
+        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
             camera_speed.y = msg.axes[0] / self.JOY_RANGE
         camera_speed.dist = math.sqrt(camera_speed.x ** 2 + camera_speed.y ** 2)
         self.camera_speed_pub.publish(camera_speed)
