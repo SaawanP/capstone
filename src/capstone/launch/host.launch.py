@@ -16,13 +16,12 @@ def generate_launch_description():
     backend_node = Node(
         package="capstone",
         executable="backend",
-        parameters=host_config
+        parameters=[host_config]
     )
 
     joy_node = Node(
         package="joy",
         executable="joy_node",
-        parameters=host_config
     )
 
     ld.add_action(backend_node)
