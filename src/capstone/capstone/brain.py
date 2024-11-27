@@ -10,9 +10,10 @@ from robot_interface.msg import Speed, Defect, Save
 from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
 
+from enum import Enum
 import math
 import numpy as np
-from enum import Enum
+
 import open3d as o3d
 import cv2
 import yaml
@@ -52,14 +53,14 @@ class Brain(Node):
         self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
         self.position_pub = self.create_publisher(Vector3, 'imu_position', 10)
 
-        self.state = self.AUTO
+        self.state = State.AUTONOMOUS
         self.bridge = CvBridge()
         self.point_cloud = []
         self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
         self.last_velocity: Vector3 = Vector3()
         self.last_imu_msg = Imu()
-        self.last_imu_msg.header.stamp = self.get_clock().now()
+        self.last_imu_msg.header.stamp = self.get_clock().now().to_msg()
 
     def joy_callback(self, msg: Joy):
         if msg.buttons[0] != 1:  # TODO fix index

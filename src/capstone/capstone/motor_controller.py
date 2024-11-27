@@ -11,9 +11,6 @@ from matplotlib.animation import FuncAnimation
 import pandas as pd
 import math
 
-from capstone.motor import Motor, PID
-import RPi.GPIO as GPIO
-
 
 def speed_monitor():
     m1_data = pd.read_csv('data/M1.csv')
@@ -74,6 +71,12 @@ class MotorController(Node):
         self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)
 
         self.position_pub = self.create_publisher(Vector3, 'motor_controller_position', 10)
+
+        if self.TEST_ENV:
+            return
+        from capstone.motor import Motor, PID
+        import RPi.GPIO as GPIO
+        GPIO.setmode(GPIO.BOARD)
 
         # Motor setup
         self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_SPEED, tracking_name="M1" if tracking else None)
@@ -154,14 +157,14 @@ def main(args=None):
     rclpy.init(args=args)
     motor_controller = MotorController()
     try:
-        GPIO.setmode(GPIO.BOARD)
         rclpy.spin(motor_controller)
     finally:
-        motor_controller.M1.shutdown()
-        motor_controller.M2.shutdown()
         motor_controller.destroy_node()
         rclpy.shutdown()
-        GPIO.cleanup()
+        if not motor_controller.TEST_ENV:
+            motor_controller.M1.shutdown()
+            motor_controller.M2.shutdown()
+            GPIO.cleanup()
 
 
 if __name__ == '__main__':

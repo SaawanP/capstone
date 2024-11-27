@@ -13,9 +13,6 @@ import depthai as dai
 import cv2
 from pathlib import Path
 
-from capstone.motor import Servo
-import RPi.GPIO as GPIO
-
 
 class Camera(Node):
     def __init__(self):
@@ -24,21 +21,17 @@ class Camera(Node):
         # Constants
         self.declare_parameter('max_camera_speed', 0)
         self.declare_parameter('fps', 0)
-        self.declare_parameter('test_env', False)
+        self.declare_parameter('test_env_camera', False)
+        self.declare_parameter('test_env_servo', False)
 
         self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().integer_value
-        self.TEST_ENV = self.get_parameter('test_env').get_parameter_value().bool_value
+        self.TEST_ENV_SERVO = self.get_parameter('test_env_servo').get_parameter_value().bool_value
+        self.TEST_ENV_CAMERA = self.get_parameter('test_env_camera').get_parameter_value().bool_value
         FPS = self.get_parameter('fps').get_parameter_value().integer_value
 
         self.bridge = CvBridge()
         self.start_time = None
         self.seen_defects = []
-
-        # Servo setup
-        self.MAX_CAMERA_SPEED = 5  # degrees/sec
-        self.servo_x = Servo(10)  # TODO change pin
-        self.servo_y = Servo(11)
-        self.last_servo_move = self.get_clock().now()
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
@@ -49,6 +42,21 @@ class Camera(Node):
         self.defect_pub = self.create_publisher(Defect, 'defect_location', 10)
         self.pointcloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
         self.depth_map_pub = self.create_publisher(Image, 'depth_map', 10)
+
+        # Create interfaces only if physical object is there
+        self.last_servo_move = self.get_clock().now()
+        if not self.TEST_ENV_SERVO:
+            from capstone.motor import Servo
+            import RPi.GPIO as GPIO
+            GPIO.setmode(GPIO.BOARD)
+            # Servo setup
+            self.servo_x = Servo(10)  # TODO change pin
+            self.servo_y = Servo(11)
+        else:
+            self.camera_position = [0, 0]
+
+        if self.TEST_ENV_CAMERA:
+            return
 
         # Camera Pipeline Setup
         self.pipeline = dai.Pipeline()
@@ -149,9 +157,13 @@ class Camera(Node):
         dt = now - self.last_servo_move
         self.last_servo_move = now
 
-        if msg.dist == -1:  # Reset servos to neutral position
-            self.servo_x.reset()
-            self.servo_y.reset()
+        # Reset servos to neutral position
+        if msg.dist == -1:
+            if self.TEST_ENV_SERVO:
+                self.camera_position = [0, 0]
+            else:
+                self.servo_x.reset()
+                self.servo_y.reset()
             return
 
         x_speed = self.MAX_CAMERA_SPEED * msg.x
@@ -163,8 +175,11 @@ class Camera(Node):
         x = self.servo_x.angle + dx
         y = self.servo_y.angle + dy
 
-        self.servo_x.set_angle(x)
-        self.servo_y.set_angle(y)
+        if self.TEST_ENV_SERVO:
+            self.camera_position = [x, y]
+        else:
+            self.servo_x.set_angle(x)
+            self.servo_y.set_angle(y)
 
     def broadcast_frame(self, frame):
         ros_image = self.bridge.cv2_to_imgmsg(frame)
@@ -286,42 +301,47 @@ def main(args=None):
     rclpy.init(args=args)
     camera = Camera()
     try:
-        GPIO.setmode(GPIO.BOARD)
-        with dai.Device(camera.pipeline) as device:
-            q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
-            q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-            q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
-            q_depthmap = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
-            q_imu = device.getOutputQueue(name="imu", maxSize=4, blocking=False)
+        if camera.TEST_ENV_CAMERA and camera.TEST_ENV_SERVO:
+            rclpy.spin(camera)
+        else:
+            with dai.Device(camera.pipeline) as device:
+                q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+                q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+                q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
+                q_depthmap = device.getOutputQueue(name="depth", maxSize=4, blocking=False)
+                q_imu = device.getOutputQueue(name="imu", maxSize=4, blocking=False)
 
-            while True:
-                in_detections = q_detections.get()
-                in_rgb = q_RGB.get()
-                in_pointcloud = q_pointcloud.get()
-                in_depthmap = q_depthmap.get()
-                in_imu = q_imu.get()
+                while True:
+                    in_detections = q_detections.get()
+                    in_rgb = q_RGB.get()
+                    in_pointcloud = q_pointcloud.get()
+                    in_depthmap = q_depthmap.get()
+                    in_imu = q_imu.get()
 
-                frame = in_rgb.getCvFrame()
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    frame = in_rgb.getCvFrame()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                detections = in_detections.detections
-                for detection in detections:
-                    frame = camera.broadcast_defect(detection, frame)
+                    detections = in_detections.detections
+                    for detection in detections:
+                        frame = camera.broadcast_defect(detection, frame)
 
-                camera.broadcast_frame(frame)
+                    camera.broadcast_frame(frame)
 
-                points = in_pointcloud.getPoints()
-                camera.broadcast_pointcloud_frame(points)
+                    points = in_pointcloud.getPoints()
+                    camera.broadcast_pointcloud_frame(points)
 
-                depth_map = in_depthmap.getFrame()
-                camera.broadcast_depth_map(depth_map)
+                    depth_map = in_depthmap.getFrame()
+                    camera.broadcast_depth_map(depth_map)
 
-                imu_packets = in_imu.packets
-                for imu_packet in imu_packets:
-                    camera.broadcast_imu_data(imu_packet)
+                    imu_packets = in_imu.packets
+                    for imu_packet in imu_packets:
+                        camera.broadcast_imu_data(imu_packet)
 
-                rclpy.spin_once(camera)
+                    rclpy.spin_once(camera)
     finally:
+        if not camera.TEST_ENV_SERVO:
+            camera.servo_x.shutdown()
+            camera.servo_y.shutdown()
         camera.destroy_node()
         rclpy.shutdown()
 
