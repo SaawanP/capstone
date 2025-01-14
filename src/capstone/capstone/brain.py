@@ -51,7 +51,7 @@ class Brain(Node):
 
         self.robot_speed_pub = self.create_publisher(Speed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
-        self.position_pub = self.create_publisher(Vector3, 'imu_position', 10)
+        self.position_pub = self.create_publisher(Vector3, 'robot_position', 10)
 
         self.state = State.AUTONOMOUS
         self.bridge = CvBridge()
@@ -149,6 +149,7 @@ class Brain(Node):
         self.camera_speed_pub.publish(camera_speed)
 
     def motor_position_callback(self, msg):
+        # TODO update curr position using motor position
         dx = abs(msg.x - self.curr_position.x)
         dy = abs(msg.y - self.curr_position.y)
         dz = abs(msg.z - self.curr_position.z)

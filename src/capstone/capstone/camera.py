@@ -13,6 +13,8 @@ import depthai as dai
 import cv2
 from pathlib import Path
 
+from capstone.transformation_matrix.py import Transformation
+
 
 class Camera(Node):
     def __init__(self):
@@ -35,6 +37,7 @@ class Camera(Node):
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
+        self.position_sub = self.create_subscription(Vector3, 'robot_position', self.position_callback,10)
 
         # TODO test using https://wiki.ros.org/image_view
         self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)
@@ -45,6 +48,8 @@ class Camera(Node):
 
         # Create interfaces only if physical object is there
         self.last_servo_move = self.get_clock().now()
+        self.camera_position = [0, 0]
+        self.transformation = Transformation()
         if not self.TEST_ENV_SERVO:
             from capstone.motor import Servo
             import RPi.GPIO as GPIO
@@ -52,8 +57,6 @@ class Camera(Node):
             # Servo setup
             self.servo_x = Servo(10)  # TODO change pin
             self.servo_y = Servo(11)
-        else:
-            self.camera_position = [0, 0]
 
         if self.TEST_ENV_CAMERA:
             return
@@ -159,9 +162,8 @@ class Camera(Node):
 
         # Reset servos to neutral position
         if msg.dist == -1:
-            if self.TEST_ENV_SERVO:
-                self.camera_position = [0, 0]
-            else:
+            self.camera_position = [0, 0]
+            if not self.TEST_ENV_SERVO:
                 self.servo_x.reset()
                 self.servo_y.reset()
             return
@@ -175,11 +177,14 @@ class Camera(Node):
         x = self.servo_x.angle + dx
         y = self.servo_y.angle + dy
 
-        if self.TEST_ENV_SERVO:
-            self.camera_position = [x, y]
-        else:
+        self.camera_position = [x, y]
+        if not self.TEST_ENV_SERVO:
             self.servo_x.set_angle(x)
             self.servo_y.set_angle(y)
+
+    def position_callback(self, msg):
+        translation = [msg.x, msg.y, msg.z]
+        self.transformation.translation = translation
 
     def broadcast_frame(self, frame):
         ros_image = self.bridge.cv2_to_imgmsg(frame)
@@ -234,9 +239,11 @@ class Camera(Node):
             return frame
 
         defect = Defect()
-        defect.location.x = detection.spatialCoordinates.x
-        defect.location.y = detection.spatialCoordinates.y
-        defect.location.z = detection.spatialCoordinates.z
+        point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
+        point = self.transformation.apply(point)
+        defect.location.x = point[0]
+        defect.location.y = point[1]
+        defect.location.z = point[2]
 
         roi = frame[y1:y2, x1:x2]
         defect.image = self.bridge.cv2_to_imgmsg(roi)
@@ -251,6 +258,7 @@ class Camera(Node):
         header = Header()
         header.stamp = self.get_clock().now()
         points = pointcloud.getPoints()
+        points = self.transformation.apply_multiple(points)
         fields = [
             PointField('x', 0, PointField.FLOAT32, 1),
             PointField('y', 4, PointField.FLOAT32, 1),
@@ -264,13 +272,13 @@ class Camera(Node):
         self.depth_map_pub.publish(ros_image)
 
     def broadcast_imu_data(self, imu_packet):
-        lin_accel_values = imu_packet.linearAcceleration
-        rot_vect_values = imu_packet.rotationVector
-        gyro_values = imu_packet.gyroscope
+        lin_accel = imu_packet.linearAcceleration
+        rot_vect = imu_packet.rotationVector
+        gyro = imu_packet.gyroscope
 
-        lin_accel_time = lin_accel_values.getTimestamp()
-        rot_vect_time = rot_vect_values.getTimestamp()
-        gyro_time = gyro_values.getTimestamp()
+        lin_accel_time = lin_accel.getTimestamp()
+        rot_vect_time = rot_vect.getTimestamp()
+        gyro_time = gyro.getTimestamp()
         if self.start_time is None:
             self.start_time = min(lin_accel_time, rot_vect_time, gyro_time)
         lin_accel_time = (lin_accel_time - self.start_time).total_seconds()
@@ -283,16 +291,17 @@ class Camera(Node):
 
         imu = Imu()
         imu.header = header
-        imu.orientation.x = rot_vect_values.i
-        imu.orientation.y = rot_vect_values.j
-        imu.orientation.z = rot_vect_values.k
-        imu.orientation.w = rot_vect_values.real
-        imu.angular_velocity.x = gyro_values.x
-        imu.angular_velocity.y = gyro_values.y
-        imu.angular_velocity.z = gyro_values.z
-        imu.linear_acceleration.x = lin_accel_values.x
-        imu.linear_acceleration.y = lin_accel_values.y
-        imu.linear_acceleration.z = lin_accel_values.z
+        imu.orientation.x = rot_vect.i
+        imu.orientation.y = rot_vect.j
+        imu.orientation.z = rot_vect.k
+        imu.orientation.w = rot_vect.real
+        self.transformation.rotation = [rot_vect.i, rot_vect.j, rot_vect.k, rot_vect.real]
+        imu.angular_velocity.x = gyro.x
+        imu.angular_velocity.y = gyro.y
+        imu.angular_velocity.z = gyro.z
+        imu.linear_acceleration.x = lin_accel.x
+        imu.linear_acceleration.y = lin_accel.y
+        imu.linear_acceleration.z = lin_accel.z
 
         self.imu_pub.publish(imu)
 
