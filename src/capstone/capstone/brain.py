@@ -112,11 +112,7 @@ class Brain(Node):
 
     def pointcloud_callback(self, msg: PointCloud2):
         points = list(pc2.read_points(msg, skip_nans=True))
-        for point in points:
-            point = [point[0] + self.curr_position.x,
-                     point[1] + self.curr_position.y,
-                     point[2] + self.curr_position.z]
-            self.point_cloud.append(point)
+        self.point_cloud += points
 
     def defect_location_callback(self, msg):
         msg.location.x += self.curr_position.x
