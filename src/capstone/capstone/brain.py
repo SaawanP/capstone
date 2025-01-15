@@ -10,10 +10,9 @@ from robot_interface.msg import Speed, Defect, Save
 from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
 
-from enum import Enum
 import math
 import numpy as np
-
+from enum import Enum
 import open3d as o3d
 import cv2
 import yaml

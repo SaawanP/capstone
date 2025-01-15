@@ -9,8 +9,7 @@ camera:
   ros__parameters:
     max_camera_speed: 5 # degrees/sec
     fps: 30
-    test_env_servo: True
-    test_env_camera: True
+    test_env: True
 
 motor_controller:
   ros__parameters:
