@@ -6,7 +6,7 @@ from cv_bridge import CvBridge
 from sensor_msgs_py import point_cloud2 as pc2
 
 from sensor_msgs.msg import Joy
-from robot_interface.msg import Speed, Defect, Save
+from robot_interface.msg import RobotSpeed, CameraSpeed, Defect, Save
 from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
 
@@ -45,11 +45,11 @@ class Brain(Node):
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
         self.depth_sub = self.create_subscription(Image, 'depth_map', self.autonomous_callback, 10)
-        self.motor_sub = self.create_subscription(Vector3, 'motor_controller_position', self.motor_position_callback, 10)
+        self.motor_sub = self.create_subscription(Vector3, 'controller_pose_position', self.motor_position_callback, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.save_report_to_file, 10)
 
-        self.robot_speed_pub = self.create_publisher(Speed, 'robot_speed', 10)
-        self.camera_speed_pub = self.create_publisher(Speed, 'camera_speed', 10)
+        self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
+        self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
         self.position_pub = self.create_publisher(Vector3, 'robot_position', 10)
 
         self.state = State.AUTONOMOUS
@@ -68,20 +68,24 @@ class Brain(Node):
 
         self.state = State.MANUAL
         # All values are -1 to 1
-        robot_speed = Speed()  # TODO fix index
+        robot_speed = RobotSpeed()  # TODO fix index
+        vx = 0
+        vy = 0
         if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            robot_speed.x = msg.axes[0] / self.JOY_RANGE
+            vx = msg.axes[0] / self.JOY_RANGE
+            robot_speed.direction = math.copysign(1, vx)
         if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            robot_speed.y = msg.axes[0] / self.JOY_RANGE
-        robot_speed.dist = math.sqrt(robot_speed.x ** 2 + robot_speed.y ** 2)
+            vy = msg.axes[0] / self.JOY_RANGE
+            robot_speed.turning_radius = msg.axes[0] / self.JOY_RANGE
+        robot_speed.speed = math.sqrt(vx ** 2 + vy ** 2)
         self.robot_speed_pub.publish(robot_speed)
 
-        camera_speed = Speed()  # TODO fix index
+        camera_speed = CameraSpeed()  # TODO fix index
+        camera_speed.reset = False
         if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            camera_speed.x = msg.axes[0] / self.JOY_RANGE
+            camera_speed.wx = msg.axes[0] / self.JOY_RANGE
         if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            camera_speed.y = msg.axes[0] / self.JOY_RANGE
-        camera_speed.dist = math.sqrt(camera_speed.x ** 2 + camera_speed.y ** 2)
+            camera_speed.wy = msg.axes[0] / self.JOY_RANGE
         self.camera_speed_pub.publish(camera_speed)
 
     def imu_callback(self, msg: Imu):
@@ -131,16 +135,16 @@ class Brain(Node):
         right_avg_dist = sum(sum(right_depth))
         diff = right_avg_dist - left_avg_dist
 
-        # Turn robot proportional to deviation, largest turn_angle=45 degrees
-        speed = Speed()
-        turn_angle = math.atan(diff) / 2
-        speed.dist = self.OPERATIONAL_SPEED / self.MAX_SPEED
-        speed.y = math.sin(turn_angle)
-        speed.x = math.cos(turn_angle)
+        # Turn robot proportional to deviation, largest turn_radius=sin(45 degrees)=1/sqrt2
+        speed = RobotSpeed()
+        turn_radius = math.sin(math.atan(diff) / 2)
+        speed.speed = self.OPERATIONAL_SPEED / self.MAX_SPEED
+        speed.turning_radius = turn_radius
+        speed.direction = 1
         self.robot_speed_pub.publish(speed)
 
-        camera_speed = Speed()
-        camera_speed.dist = -1  # Reset to neutral position
+        camera_speed = CameraSpeed()
+        camera_speed.reset = True
         self.camera_speed_pub.publish(camera_speed)
 
     def motor_position_callback(self, msg):

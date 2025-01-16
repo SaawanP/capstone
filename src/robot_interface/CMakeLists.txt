@@ -20,7 +20,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-    "msg/Speed.msg"
+    "msg/RobotSpeed.msg"
+    "msg/CameraSpeed.msg"
     "msg/Defect.msg"
     "msg/Save.msg"
     DEPENDENCIES ${dpd}

@@ -14,6 +14,8 @@ camera:
 motor_controller:
   ros__parameters:
     max_rpm: 70 # rpm
+    radius: 1.0 # m
+    length: 1.0 # m
     circ: 1.0 # m
     width: 5.0 # m, width from wheel to wheel
     tracking: True

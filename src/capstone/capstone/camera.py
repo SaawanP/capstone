@@ -154,14 +154,14 @@ class Camera(Node):
         self.last_servo_move = now
 
         # Reset servos to neutral position
-        if msg.dist == -1:
+        if msg.reset == True:
             self.camera_position = [0, 0]
             self.servo_x.reset()
             self.servo_y.reset()
             return
 
-        x_speed = self.MAX_CAMERA_SPEED * msg.x
-        y_speed = self.MAX_CAMERA_SPEED * msg.y
+        x_speed = self.MAX_CAMERA_SPEED * msg.wx
+        y_speed = self.MAX_CAMERA_SPEED * msg.wy
 
         dx = x_speed * dt
         dy = y_speed * dt

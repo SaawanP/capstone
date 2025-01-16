@@ -51,6 +51,8 @@ class MotorController(Node):
 
         # Constants
         self.declare_parameter('max_rpm', 0)
+        self.declare_parameter('radius', 0.0)
+        self.declare_parameter('length', 0.0)
         self.declare_parameter('circ', 0.0)
         self.declare_parameter('width', 0.0)
         self.declare_parameter('tracking', False)
@@ -61,6 +63,8 @@ class MotorController(Node):
 
         # TODO move parameters to ROS param
         self.MAX_RPM = self.get_parameter('max_rpm').get_parameter_value().integer_value
+        self.WHEEL_RADIUS = self.get_parameter('radius').get_parameter_value().double_value
+        self.LENGTH = self.get_parameter('length').get_parameter_value().double_value
         self.CIRC = self.get_parameter('circ').get_parameter_value().double_value
         self.MAX_SPEED = self.MAX_RPM * self.CIRC  # m/min
         self.WIDTH = self.get_parameter('width').get_parameter_value().double_value
@@ -73,7 +77,7 @@ class MotorController(Node):
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)
 
-        self.position_pub = self.create_publisher(Vector3, 'motor_controller_position', 10)
+        self.position_pub = self.create_publisher(Vector3, 'controller_pose_position', 10)
 
         # Motor setup
         self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_SPEED, tracking_name="M1" if tracking else None)
@@ -97,17 +101,20 @@ class MotorController(Node):
             plt.show(block=False)
 
     def speed_callback(self, msg):
-        speed = msg.dist * self.MAX_SPEED
+        speed = msg.speed * self.MAX_SPEED
 
-        if msg.y == 0:
-            self.left_rpm = self.right_rpm = speed / self.CIRC
+        if msg.turning_radius == 0:
+            self.left_rpm = self.right_rpm = speed / self.WHEEL_RADIUS
             return
 
-        self.turning_radius = r = abs(1 / msg.y)  # cm
-        w1 = r / (r + self.WIDTH / 2) * speed / self.CIRC
-        w2 = (r + self.WIDTH) / (r + self.WIDTH / 2) * speed / self.CIRC
+        self.turning_radius = r = msg.turning_radius  # cm
+        ang_speed = speed / r
+        s1 = speed + self.WIDTH * ang_speed / 2
+        s2 = speed - self.WIDTH * ang_speed / 2
+        w1 = (s1 + (self.LENGTH * ang_speed / 2) ** 2 / s1) / self.WHEEL_RADIUS
+        w2 = (s2 + (self.LENGTH * ang_speed / 2) ** 2 / s2) / self.WHEEL_RADIUS
 
-        if msg.y > 0:
+        if msg.turning_radius > 0:
             self.right_rpm = w1
             self.left_rpm = w2
         else:
@@ -115,7 +122,7 @@ class MotorController(Node):
             self.left_rpm = w1
 
         self.get_logger().debug(
-            f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.x / abs(msg.x)}")
+            f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
 
     def PID_controller(self):
         self.PID1.set_target_speed(self.left_rpm)
@@ -124,7 +131,9 @@ class MotorController(Node):
     def pose_estimation(self, dt):
         left_rpm = self.M1.speed
         right_rpm = self.M2.speed
-        v = sum(left_rpm, right_rpm) / 2 * self.CIRC
+        v = (left_rpm + right_rpm) * self.WHEEL_RADIUS / 2
+        w = (left_rpm - right_rpm) * self.WHEEL_RADIUS / self.WIDTH
+        # TODO check the error for this estimation
 
         # Update position
         self.position.x += math.cos(self.angle) * v * dt
@@ -132,21 +141,6 @@ class MotorController(Node):
         self.position_pub.publish(self.position)
 
         # Update angle
-        if left_rpm > right_rpm:
-            left_turn_radius = self.turning_radius + self.WIDTH
-            right_turn_radius = self.turning_radius
-            direction = 1
-        elif right_rpm > left_rpm:
-            right_turn_radius = self.turning_radius + self.WIDTH
-            left_turn_radius = self.turning_radius
-            direction = -1
-        else:
-            return
-
-        # TODO check if the two w are the simialar
-        left_w = left_rpm / left_turn_radius
-        right_w = right_rpm / right_turn_radius
-        w = direction * sum(left_w, right_w) / 2
         self.angle += w * dt
 
 
