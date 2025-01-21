@@ -150,13 +150,13 @@ class PID:
 
 
 class Servo:
-    def __init__(self, pin):
+    def __init__(self, pin, starting_angle=0):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
         GPIO.output(self.pin, 1)
         self.pwm = GPIO.PWM(self.pin, 50)
         self.pwm.start(7)  # Start servo at 90 degrees
-        self.angle = 90
+        self.angle = starting_angle
 
     def set_angle(self, angle):
         self.angle = angle

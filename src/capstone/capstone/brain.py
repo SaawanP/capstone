@@ -29,13 +29,11 @@ class Brain(Node):
 
         # Constants
         self.declare_parameter('joy_range', 0)
-        self.declare_parameter('dead_band', 0)
         self.declare_parameter('max_speed', 0)
         self.declare_parameter('operational_speed', 0)
 
         # TODO fix numbers
         self.JOY_RANGE = self.get_parameter('joy_range').get_parameter_value().integer_value
-        self.DEAD_BAND = self.get_parameter('dead_band').get_parameter_value().integer_value
         self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
         self.OPERATIONAL_SPEED = self.get_parameter('operational_speed').get_parameter_value().integer_value
 
@@ -62,7 +60,7 @@ class Brain(Node):
         self.last_imu_msg.header.stamp = self.get_clock().now().to_msg()
 
     def joy_callback(self, msg: Joy):
-        if msg.buttons[0] != 1:  # TODO fix index
+        if msg.buttons[1] != 1:  # TODO fix index
             self.state = State.AUTONOMOUS
             return
 
@@ -71,21 +69,17 @@ class Brain(Node):
         robot_speed = RobotSpeed()  # TODO fix index
         vx = 0
         vy = 0
-        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            vx = msg.axes[0] / self.JOY_RANGE
-            robot_speed.direction = math.copysign(1, vx)
-        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            vy = msg.axes[0] / self.JOY_RANGE
-            robot_speed.turning_radius = msg.axes[0] / self.JOY_RANGE
+        vx = msg.axes[2] / self.JOY_RANGE
+        robot_speed.direction = math.copysign(1, vx)
+        vy = msg.axes[3] / self.JOY_RANGE
+        robot_speed.turning_radius = msg.axes[0] / self.JOY_RANGE
         robot_speed.speed = math.sqrt(vx ** 2 + vy ** 2)
         self.robot_speed_pub.publish(robot_speed)
 
         camera_speed = CameraSpeed()  # TODO fix index
         camera_speed.reset = False
-        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            camera_speed.wx = msg.axes[0] / self.JOY_RANGE
-        if msg.axes[0] > self.DEAD_BAND or msg.axes < -self.DEAD_BAND:
-            camera_speed.wy = msg.axes[0] / self.JOY_RANGE
+        camera_speed.wx = msg.axes[0] / self.JOY_RANGE
+        camera_speed.wy = msg.axes[1] / self.JOY_RANGE
         self.camera_speed_pub.publish(camera_speed)
 
     def imu_callback(self, msg: Imu):

@@ -12,6 +12,7 @@ from std_msgs.msg import Header
 import depthai as dai
 import cv2
 from pathlib import Path
+import math
 
 from capstone.transformation_matrix.py import Transformation
 from capstone.motor import Servo
@@ -24,11 +25,13 @@ class Camera(Node):
 
         # Constants
         self.declare_parameter('max_camera_speed', 0)
+        self.declare_parameter('max_camera_range', 30)
+        self.declare_parameter('starting_camera_angle', 90)
         self.declare_parameter('fps', 0)
-        self.declare_parameter('test_env', False)
 
         self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().integer_value
-        self.TEST_ENV = self.get_parameter('test_env').get_parameter_value().bool_value
+        self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value
+        self.START_CAMERA_ANGLE = self.get_parameter('starting_camera_angle').get_parameter_value().integer_value
         FPS = self.get_parameter('fps').get_parameter_value().integer_value
 
         self.bridge = CvBridge()
@@ -36,9 +39,8 @@ class Camera(Node):
         self.seen_defects = []
 
         # Servo setup
-        self.MAX_CAMERA_SPEED = 5  # degrees/sec
-        self.servo_x = Servo(10)  # TODO change pin
-        self.servo_y = Servo(11)
+        self.servo_x = Servo(10, self.START_CAMERA_ANGLE)  # TODO change pin
+        self.servo_y = Servo(11, self.START_CAMERA_ANGLE)
         self.last_servo_move = self.get_clock().now()
         self.camera_position = [0, 0]
         self.transformation = Transformation()
@@ -169,9 +171,14 @@ class Camera(Node):
         x = self.servo_x.angle + dx
         y = self.servo_y.angle + dy
 
+        if abs(x) > self.MAX_CAMERA_RANGE:
+            x = math.copysign(self.MAX_CAMERA_RANGE, x)
+        if abs(y) > self.MAX_CAMERA_RANGE:
+            y = math.copysign(self.MAX_CAMERA_RANGE, y)
+
         self.camera_position = [x, y]
-        self.servo_x.set_angle(x)
-        self.servo_y.set_angle(y)
+        self.servo_x.set_angle(self.START_CAMERA_ANGLE + x)
+        self.servo_y.set_angle(self.START_CAMERA_ANGLE + y)
 
     def position_callback(self, msg):
         translation = [msg.x, msg.y, msg.z]

@@ -56,7 +56,6 @@ class MotorController(Node):
         self.declare_parameter('circ', 0.0)
         self.declare_parameter('width', 0.0)
         self.declare_parameter('tracking', False)
-        self.declare_parameter('test_env', False)
         self.declare_parameter('Kp', 0.0)
         self.declare_parameter('Ki', 0.0)
         self.declare_parameter('Kd', 0.0)
@@ -72,7 +71,6 @@ class MotorController(Node):
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
         tracking = self.get_parameter('tracking').get_parameter_value().bool_value
-        self.TEST_ENV = self.get_parameter('test_env').get_parameter_value().bool_value
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)
