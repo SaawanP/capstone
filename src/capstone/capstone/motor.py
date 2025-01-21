@@ -5,9 +5,9 @@ from typing import Optional
 
 
 class Motor:
-    def __init__(self, in1, in2, en, enc_A, enc_B, max_speed, encoder_ticks=350, tracking_name: Optional[str] = None):
+    def __init__(self, in1, in2, en, enc_A, enc_B, max_rpm, encoder_ticks=350, tracking_name: Optional[str] = None):
         self.file_name = "data/" + tracking_name if tracking_name else None
-        self.max_speed = max_speed
+        self.max_rpm = max_rpm
         self.encoder_ticks = encoder_ticks
         self.in1 = in1
         self.in2 = in2
@@ -23,7 +23,7 @@ class Motor:
         GPIO.setup(self.in1, GPIO.OUT)
         GPIO.setup(self.in2, GPIO.OUT)
         GPIO.setup(self.en, GPIO.OUT)
-        self.pwm = GPIO.pwm(self.en, 1000)  # TODO change frequency
+        self.pwm = GPIO.pwm(self.en, 1000)
         self.pwm.start(0)
 
         GPIO.setup(self.enc_A, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -59,17 +59,17 @@ class Motor:
                 csv_writer.writerow(info)
 
     def convert_to_duty(self, x):
-        if x > self.max_speed:
-            ValueError(f"Needed speed of {x} is higher than max speed of {self.max_speed}")
+        if x > self.max_rpm:
+            raise ValueError(f"Needed speed of {x} is higher than max speed of {self.max_rpm}")
         elif x < 0:
-            ValueError(f"Needed speed of {x} is less than 0")
+            raise ValueError(f"Needed speed of {x} is less than 0")
 
-        return (x * 100) // self.max_speed
+        return (x * 100) // self.max_rpm
 
-    def set_speed(self, speed):
-        duty = self.convert_to_duty(abs(speed))
+    def set_rpm(self, rpm):
+        duty = self.convert_to_duty(abs(rpm))
         self.pwm.ChangeDutyCycle(duty)
-        if speed > 0:
+        if rpm > 0:
             GPIO.output(self.in1, 1)
             GPIO.output(self.in2, 0)
         else:
@@ -116,7 +116,7 @@ class PID:
         return u
 
     # Function for closed loop speed control
-    def set_target_speed(self, target):
+    def set_target_rpm(self, target):
         pos = self.M.pos
 
         # Target RPM
@@ -133,7 +133,7 @@ class PID:
         x = int(self.eval(v, vt, self.period))
 
         # Bound control signal
-        x = min(max(x, -self.M.max_speed), self.M.max_speed)
+        x = min(max(x, -self.M.max_rpm), self.M.max_rpm)
 
         if self.file_name:
             with open(self.file_name, 'a') as csv_file:
@@ -146,7 +146,7 @@ class PID:
                 csv_writer.writerow(info)
 
         # Set the motor speed
-        self.M.set_speed(x)
+        self.M.set_rpm(x)
 
 
 class Servo:

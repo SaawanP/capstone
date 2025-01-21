@@ -66,7 +66,7 @@ class MotorController(Node):
         self.WHEEL_RADIUS = self.get_parameter('radius').get_parameter_value().double_value
         self.LENGTH = self.get_parameter('length').get_parameter_value().double_value
         self.CIRC = self.get_parameter('circ').get_parameter_value().double_value
-        self.MAX_SPEED = self.MAX_RPM * self.CIRC  # m/min
+        self.MAX_SPEED = self.MAX_RPM * self.CIRC / 60  # m/s
         self.WIDTH = self.get_parameter('width').get_parameter_value().double_value
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
@@ -80,8 +80,8 @@ class MotorController(Node):
         self.position_pub = self.create_publisher(Vector3, 'controller_pose_position', 10)
 
         # Motor setup
-        self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_SPEED, tracking_name="M1" if tracking else None)
-        self.M2 = Motor(14, 15, 16, 17, 18, self.MAX_SPEED, tracking_name="M2" if tracking else None)
+        self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_RPM, tracking_name="M1" if tracking else None)
+        self.M2 = Motor(14, 15, 16, 17, 18, self.MAX_RPM, tracking_name="M2" if tracking else None)
         self.left_rpm = 0
         self.right_rpm = 0
         self.angle = 0
@@ -125,8 +125,8 @@ class MotorController(Node):
             f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
 
     def PID_controller(self):
-        self.PID1.set_target_speed(self.left_rpm)
-        self.PID2.set_target_speed(self.right_rpm)
+        self.PID1.set_target_rpm(self.left_rpm)
+        self.PID2.set_target_rpm(self.right_rpm)
 
     def pose_estimation(self, dt):
         left_rpm = self.M1.speed
@@ -148,7 +148,7 @@ def main(args=None):
     rclpy.init(args=args)
     motor_controller = MotorController()
     try:
-        GPIO.setmode(GPIO.BOARD)
+        GPIO.setmode(GPIO.BCM)
         rclpy.spin(motor_controller)
     finally:
         motor_controller.M1.shutdown()
