@@ -8,7 +8,6 @@ from geometry_msgs.msg import Vector3
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import pandas as pd
 import math
 
 from capstone.motor import Motor, PID
