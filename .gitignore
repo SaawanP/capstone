@@ -2,6 +2,8 @@
 build/
 install/
 log/
+logs/
 venv/
-
+__pycache__/
+generated-files/
 *.csv

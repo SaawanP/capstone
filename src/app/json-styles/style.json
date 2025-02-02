@@ -1,6 +1,6 @@
 {
-  "ShowLogs": true,
-  "LiveCompileQss": true,
+  "ShowLogs": false,
+  "LiveCompileQss": false,
   "CheckForMissingicons": false,
 	"QMainWindow": [
 	  {
