@@ -22,7 +22,7 @@ class JoyPublisher(Node):
     def joy_callback(self, msg):
         # Forward the joy message to the robot
         self.publisher.publish(msg)
-        self.get_logger().info(f'Buttons: {msg.buttons}, Axes: {msg.axes}')
+        # self.get_logger().info(f'Buttons: {msg.buttons}, Axes: {msg.axes}')
 
 def main(args=None):
     rclpy.init(args=args)
