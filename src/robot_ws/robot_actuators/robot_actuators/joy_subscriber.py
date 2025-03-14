@@ -15,6 +15,7 @@ class JoySubscriber(Node):
         self.motor_pin2 = 18  # Example: reverse direction
         self.led_pin    = 22  # Example: LED control
         self.servo_pin  = 27  # Example: Servo PWM signal
+        self.en = 28
         
         GPIO.setup(self.motor_pin1, GPIO.OUT)
         GPIO.setup(self.motor_pin2, GPIO.OUT)
@@ -25,14 +26,21 @@ class JoySubscriber(Node):
         self.servo_pwm = GPIO.PWM(self.servo_pin, 50)
         self.servo_pwm.start(7.5)  # Neutral position
 
+        GPIO.setup(self.en, GPIO.OUT)
+        self.pwm = GPIO.pwm(self.en, 1000)
+        self.pwm.start(0)
+
+        self.led = False
+
     def joy_callback(self, msg):
         # --- Motor Control ---
-        # Assuming axis[1] controls motor forward/reverse:
-        if msg.axes[1] > 0:
+        if msg.axes[1] > 50:
+            self.pwm.ChangeDutyCycle(msg.axes[1]//380)
             GPIO.output(self.motor_pin1, GPIO.HIGH)
             GPIO.output(self.motor_pin2, GPIO.LOW)
             self.get_logger().info('Motor: Forward')
-        elif msg.axes[1] < 0:
+        elif msg.axes[1] < 50:
+            self.pwm.ChangeDutyCycle(msg.axes[1] // 380)
             GPIO.output(self.motor_pin1, GPIO.LOW)
             GPIO.output(self.motor_pin2, GPIO.HIGH)
             self.get_logger().info('Motor: Reverse')
@@ -42,13 +50,14 @@ class JoySubscriber(Node):
             self.get_logger().info('Motor: Stop')
 
         # --- LED Control ---
-        # For example, button 0 toggles the LED:
         if msg.buttons[0]:
-            GPIO.output(self.led_pin, GPIO.HIGH)
-            self.get_logger().info('LED: ON')
-        else:
-            GPIO.output(self.led_pin, GPIO.LOW)
-            self.get_logger().info('LED: OFF')
+            self.led = not self.led
+            if self.led:
+                GPIO.output(self.led_pin, GPIO.HIGH)
+                self.get_logger().info('LED: ON')
+            else:
+                GPIO.output(self.led_pin, GPIO.LOW)
+                self.get_logger().info('LED: OFF')
 
         # --- Servo Control ---
         # Use button 1 with axis[0] to control the servo position:
@@ -64,6 +73,7 @@ class JoySubscriber(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = JoySubscriber()
+    GPIO.setmode(GPIO.BCM)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
