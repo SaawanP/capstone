@@ -22,8 +22,10 @@ class JoySubscriber(Node):
         GPIO.setup(self.motor_pin1, GPIO.OUT)
         GPIO.setup(self.motor_pin2, GPIO.OUT)
         GPIO.setup(self.led_pin, GPIO.OUT)
-        GPIO.setup(self.servo_pin, GPIO.OUT)
-        
+        GPIO.setup(self.servo_pin_track, GPIO.OUT)
+        GPIO.setup(self.servo_pin_x_camera, GPIO.OUT)
+        GPIO.setup(self.servo_pin_y_camera, GPIO.OUT)
+
         # Setup PWM for the servo (50Hz is typical)
         self.servo_pwm_track = GPIO.PWM(self.servo_pin_track, 50)
         self.track_angle = 0
