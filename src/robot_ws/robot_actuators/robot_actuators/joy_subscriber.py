@@ -43,13 +43,15 @@ class JoySubscriber(Node):
 
     def joy_callback(self, msg):
         # --- Motor Control ---
-        if msg.axes[1] > 50:
-            self.pwm.ChangeDutyCycle(msg.axes[1]//32767)
+        if msg.axes[1] > 0:
+            duty = msg.axes[1] * 100
+            self.pwm.ChangeDutyCycle(duty)
             GPIO.output(self.motor_pin1, GPIO.HIGH)
             GPIO.output(self.motor_pin2, GPIO.LOW)
             self.get_logger().info('Motor: Forward')
-        elif msg.axes[1] < 50:
-            self.pwm.ChangeDutyCycle(msg.axes[1] // 32767)
+        elif msg.axes[1] < 0:
+            duty = -msg.axes[1] * 100
+            self.pwm.ChangeDutyCycle(duty)
             GPIO.output(self.motor_pin1, GPIO.LOW)
             GPIO.output(self.motor_pin2, GPIO.HIGH)
             self.get_logger().info('Motor: Reverse')
@@ -59,10 +61,10 @@ class JoySubscriber(Node):
             self.get_logger().info('Motor: Stop')
 
         # Map axis value (-1.0 to 1.0) to a duty cycle range (e.g., 5% to 10%)
-        duty = (msg.axes[3] // 32767 + 1) * 50
+        duty = (msg.axes[3] + 1) * 50
         self.servo_pwm_y_camera.ChangeDutyCycle(duty)
 
-        duty = (msg.axes[2] // 32767 + 1) * 50
+        duty = (msg.axes[2] + 1) * 50
         self.servo_pwm_x_camera.ChangeDutyCycle(duty)
 
         # --- LED Control ---
