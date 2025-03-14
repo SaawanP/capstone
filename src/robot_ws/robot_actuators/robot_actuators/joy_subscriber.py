@@ -35,12 +35,12 @@ class JoySubscriber(Node):
     def joy_callback(self, msg):
         # --- Motor Control ---
         if msg.axes[1] > 50:
-            self.pwm.ChangeDutyCycle(msg.axes[1]//380)
+            self.pwm.ChangeDutyCycle(msg.axes[1]//32767)
             GPIO.output(self.motor_pin1, GPIO.HIGH)
             GPIO.output(self.motor_pin2, GPIO.LOW)
             self.get_logger().info('Motor: Forward')
         elif msg.axes[1] < 50:
-            self.pwm.ChangeDutyCycle(msg.axes[1] // 380)
+            self.pwm.ChangeDutyCycle(msg.axes[1] // 32767)
             GPIO.output(self.motor_pin1, GPIO.LOW)
             GPIO.output(self.motor_pin2, GPIO.HIGH)
             self.get_logger().info('Motor: Reverse')
