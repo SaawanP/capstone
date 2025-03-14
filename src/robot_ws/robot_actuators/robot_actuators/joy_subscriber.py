@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
@@ -27,7 +27,7 @@ class JoySubscriber(Node):
         self.servo_pwm.start(7.5)  # Neutral position
 
         GPIO.setup(self.en, GPIO.OUT)
-        self.pwm = GPIO.pwm(self.en, 1000)
+        self.pwm = GPIO.PWM(self.en, 1000)
         self.pwm.start(0)
 
         self.led = False
