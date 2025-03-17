@@ -50,7 +50,7 @@ class Camera(Node):
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
-        self.position_sub = self.create_subscription(Vector3, 'robot_position', self.position_callback,10)
+        self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
 
         # TODO test using https://wiki.ros.org/image_view
         self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)

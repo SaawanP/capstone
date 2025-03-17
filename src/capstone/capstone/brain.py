@@ -36,7 +36,6 @@ class Brain(Node):
 
         self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
-        self.position_pub = self.create_publisher(Vector3, 'robot_position', 10)
 
         self.bridge = CvBridge()
         self.point_cloud = []
@@ -73,12 +72,6 @@ class Brain(Node):
         msg.location.y += self.curr_position.y
         msg.location.z += self.curr_position.z
         self.defect_locations.append(msg)
-
-    def motor_position_callback(self, msg):
-        dx = abs(msg.x - self.curr_position.x)
-        dy = abs(msg.y - self.curr_position.y)
-        dz = abs(msg.z - self.curr_position.z)
-        dist = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
     def save_report_to_file(self, msg):
         folder = msg.save_location + "/" + msg.report_name
