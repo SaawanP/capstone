@@ -1,54 +1,62 @@
-import numpy
-from math import sin, cos
+import numpy as np
+from numpy.linalg import norm, inv
+import math
+from scipy.spatial.transform import Rotation as R
 
 class Transformation:
-    def __init__(self):
-        self.matrix = numpy.identity(4)
+    def __init__(self, rotation=None, translation=None):
+        self.matrix = np.identity(4)
+
+        if rotation is not None:
+            self.rotation = rotation
+        if translation is not None:
+            self.translation = translation
+
+    def __str__(self):
+        matrix = self.matrix.__str__()
+        rotation = self.rotation.__str__()
+        translation = self.translation.__str__()
+
+        return f"The full matrix is: \n {matrix} \n The rotation matrix is: \n {rotation} \n The translation is: \n {translation} \n"
 
     @property
     def rotation(self):
-        return self.matrix[0:3,0:3]
+        return self.matrix[0:3, 0:3]
 
     @rotation.setter
-    def rotation(self, angles: list):
-        if len(angles) != 3 or len(angles) != 4:
-            raise ValueError(f"Setting rotation angle takes in a list of length 3 or 4, list of length {len(angles)} was given")
+    def rotation(self, inp: list):
+        th = 1e-10
+        if inp.shape == (3, 3):
+            for i in range(3):
+                for j in range(3):
+                    if inp[i,j] < th and inp[i,j] > -th:
+                        inp[i,j] = 0
+            self.matrix[0:3, 0:3] = inp
+        else:
+            raise ValueError("input array is the wrong size")
 
-        if len(angles) == 3:
-            roll, pitch, yaw = angles
+    def vector_to_vector(self, final_vector, starting_vector):
+        final_vector = np.array(final_vector)
+        starting_vector = np.array(starting_vector)
 
-            self.matrix[0][0] = cos(yaw) * cos(pitch)
-            self.matrix[0][1] = -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll)
-            self.matrix[0][2] = sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll)
-            self.matrix[1][0] = sin(yaw) * cos(pitch)
-            self.matrix[1][1] = cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll)
-            self.matrix[1][2] = -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll)
-            self.matrix[2][0] = -sin(pitch)
-            self.matrix[2][1] = cos(pitch) * sin(roll)
-            self.matrix[2][2] = cos(pitch) * cos(roll)
+        axis = np.cross(final_vector, starting_vector)
+        c = np.dot(-final_vector, starting_vector)
+        theta = math.acos(c / (norm(final_vector) * norm(starting_vector)))
 
-        elif len(angles) == 4:
-            q1, q2, q3, q0 = angles
-
-            self.matrix[0][0] = 2 * (q0 * q0 + q1 * q1) - 1
-            self.matrix[0][1] = 2 * (q1 * q2 - q0 * q3)
-            self.matrix[0][2] = 2 * (q1 * q3 + q0 * q2)
-            self.matrix[1][0] = 2 * (q1 * q2 + q0 * q3)
-            self.matrix[1][1] = 2 * (q0 * q0 + q2 * q2) - 1
-            self.matrix[1][2] = 2 * (q2 * q3 - q0 * q1)
-            self.matrix[2][0] = 2 * (q1 * q3 - q0 * q2)
-            self.matrix[2][1] = 2 * (q2 * q3 + q0 * q1)
-            self.matrix[2][2] = 2 * (q0 * q0 + q3 * q3) - 1
+        quat = [0, 0, 0, 1]
+        if not (axis.all(where=0) and theta == math.pi):
+            mag = math.sqrt(axis[0] ** 2 + axis[1] ** 2 + axis[2] ** 2)
+            axis /= mag
+            axis = axis * math.sin(theta / 2)
+            quat = [axis[0], axis[1], axis[2], math.cos(theta/2)]
+        self.rotation = R.from_quat(quat).as_matrix()
 
     @property
     def translation(self):
-        return self.matrix[0:3,3:].flatten()
+        return self.matrix[0:3, 3:].flatten()
 
     @translation.setter
     def translation(self, new_translation):
-        if len(new_translation) != 3:
-            raise ValueError(f"Setting translation takes in a list of length 3, list of length {len(new_translation)} was given")
-
         self.matrix[0][3] = new_translation[0]
         self.matrix[1][3] = new_translation[1]
         self.matrix[2][3] = new_translation[2]
@@ -58,26 +66,29 @@ class Transformation:
             raise ValueError(f"Can't multiply Transforamtion and {type(other)}")
 
         new = Transformation()
-        new.matrix = numpy.matmul(self.matrix, other.matrix)
+        new.matrix = np.matmul(self.matrix, other.matrix)
         return new
 
     def apply(self, vector):
-        if len(vector) != 3 or len(vector) != 4:
+        if len(vector) != 3 and len(vector) != 4:
             raise ValueError(f"Can't apply transforamtion to vector that is not length 3 or 4, given {len(vector)}")
 
         if len(vector) == 3:
             if vector.shape != (3,):
                 raise ValueError(f"Ensure the shape of the vector is either (3,) or (4,), given {vector.shape}")
-            vector.append(1)
+            vector = np.append(vector, 1)
 
         if vector.shape != (4,):
             raise ValueError(f"Ensure the shape of the vector is either (3,) or (4,), given {vector.shape}")
 
-        return matmul(self.matrix, vector)
+        return np.matmul(self.matrix, vector)
 
     def apply_multiple(self, array):
-        points = []
-        for vector in array:
-            point = self.apply(vector)
-            points.append(point)
-        return points
+        array = np.transpose(array)
+        ones = np.ones(shape=(1, array.shape[1]))
+        array = np.append(array, ones, axis=0)
+        a = np.matmul(self.matrix, array)[:3]
+        return np.transpose(a)
+
+    def invert(self):
+        self.matrix = inv(self.matrix)

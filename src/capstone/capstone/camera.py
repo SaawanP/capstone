@@ -13,6 +13,8 @@ import depthai as dai
 import cv2
 from pathlib import Path
 import math
+import numpy as np
+import struct
 
 from capstone.transformation_matrix.py import Transformation
 from capstone.motor import Servo
@@ -252,17 +254,74 @@ class Camera(Node):
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
         return frame
 
-    def broadcast_pointcloud_frame(self, pointcloud):
+    def broadcast_pointcloud_frame(self, pointcloud, frame):
+        points = pointcloud.getPoints().astype(np.float64)
+
+        # Remove zero points
+        non_zero_mask = ~np.all(points == 0, axis=1)
+        points = points[non_zero_mask]
+
+        # Filter based on distances
+        distances = points[:, 2]
+        counts, bin_edges = np.histogram(distances, bins=100, density=False)
+        # changes = [counts[i] - counts[i + 1] for i in range(len(counts) - 1)]
+        # max_dist = bin_edges[np.argmax(changes[1:]) + 2]
+        max_dist = bin_edges[2]
+        # Apply max_dist filtering
+        valid_points_mask = points[:, 2] <= max_dist
+        points = points[valid_points_mask]
+
+        # Filter based on radius
+        q1_points = points[(points[:, 0] > 0) & (points[:, 1] > 0)]
+        q1_centre = np.array((np.average(q1_points[:, 0]), np.average(q1_points[:, 1])))
+        q2_points = points[(points[:, 0] < 0) & (points[:, 1] > 0)]
+        q2_centre = np.array((np.average(q1_points[:, 0]), np.average(q1_points[:, 1])))
+        q3_points = points[(points[:, 0] < 0) & (points[:, 1] < 0)]
+        q3_centre = np.array((np.average(q3_points[:, 0]), np.average(q3_points[:, 1])))
+        q4_points = points[(points[:, 0] > 0) & (points[:, 1] < 0)]
+        q4_centre = np.array((np.average(q4_points[:, 0]), np.average(q4_points[:, 1])))
+        centre = (q1_centre + q2_centre + q3_centre + q4_centre) / 4
+        radial_distance = np.sqrt((points[:, 0] - centre[0]) ** 2 + (points[:, 1] - centre[1]) ** 2)
+        rad_count, rad_bin_edges = np.histogram(radial_distance, bins=100, density=False)
+
+        diff_counts = np.diff(rad_count)
+        threshold = np.mean(diff_counts) + np.std(diff_counts)
+        big_jump_indices = np.where(diff_counts > threshold)[0]  # Get indices where jump is large
+
+        if len(big_jump_indices) >= 2:
+            first_jump_idx, second_jump_idx = big_jump_indices[:2]
+            first_jump_bin = rad_bin_edges[first_jump_idx - 1]
+            second_jump_bin = rad_bin_edges[second_jump_idx + 3]
+
+        radius_mask = radial_distance <= second_jump_bin
+        points = points[radius_mask]
+
+        # Ensure colors are filtered accordingly
+        colors = (frame.reshape(-1, 3) / 255.0).astype(np.float64)
+        colors = colors[non_zero_mask]
+        colors = colors[valid_points_mask]
+        colors = colors[radius_mask]
+
+        combined_colors = []
+        for color in colors:
+            r, g, b = color
+            a = 255
+            rgba = struct.unpack('I', struct.pack('BBBB', b, g, r, a))[0]
+            combined_colors.append(rgba)
+        combined_colors = np.transpose([combined_colors])
+        pc = np.append(points, combined_colors, axis=1)
+
+        # Create ROS message
         header = Header()
         header.stamp = self.get_clock().now()
-        points = pointcloud.getPoints()
-        points = self.transformation.apply_multiple(points)
+        header.frame_id = 'map'
         fields = [
             PointField('x', 0, PointField.FLOAT32, 1),
             PointField('y', 4, PointField.FLOAT32, 1),
             PointField('z', 8, PointField.FLOAT32, 1),
+            PointField('rgb', 16, PointField.UINT32, 1),
         ]
-        ros_pc = pc2.create_cloud(header, fields, points)
+        ros_pc = pc2.create_cloud(header, fields, pc)
         self.pointcloud_pub.publish(ros_pc)
 
     def broadcast_depth_map(self, depth_map):
@@ -333,7 +392,7 @@ def main(args=None):
                 camera.broadcast_frame(frame)
 
                 points = in_pointcloud.getPoints()
-                camera.broadcast_pointcloud_frame(points)
+                camera.broadcast_pointcloud_frame(points, frame)
 
                 depth_map = in_depthmap.getFrame()
                 camera.broadcast_depth_map(depth_map)
