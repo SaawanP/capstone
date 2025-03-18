@@ -7,6 +7,7 @@ from sensor_msgs_py import point_cloud2 as pc2
 
 from robot_interface.msg import Speed, Defect
 from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
+from geometry_msgs.msg import Vector3
 from std_msgs.msg import Header
 from geometry_msgs.msg import Vector3
 
