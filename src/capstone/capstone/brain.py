@@ -14,6 +14,8 @@ import math
 import open3d as o3d
 import cv2
 import yaml
+import h5py
+import struct
 
 
 class Brain(Node):
@@ -38,12 +40,12 @@ class Brain(Node):
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
 
         self.bridge = CvBridge()
-        self.point_cloud = []
         self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
         self.last_velocity: Vector3 = Vector3()
         self.last_imu_msg = Imu()
         self.last_imu_msg.header.stamp = self.get_clock().now().to_msg()
+        self.current_timestep = 0
 
     def joy_callback(self, msg: Joy):
         # All values are -1 to 1
@@ -64,8 +66,27 @@ class Brain(Node):
         self.camera_speed_pub.publish(camera_speed)
 
     def pointcloud_callback(self, msg: PointCloud2):
-        points = list(pc2.read_points(msg, skip_nans=True))
-        self.point_cloud += points
+        colored_points = list(pc2.read_points(msg, skip_nans=True))
+        points = []
+        colors = []
+        for colored_point in colored_points:
+            point = colored_point[0: 3]
+            points.append(point)
+            b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
+            colors.append([r, g, b])
+
+        with h5py.File("data_storage.h5", "a") as f:
+            # Store points on file
+            self.current_timestep += 1
+            frame_id = f"{self.current_timestep}"
+            grp = f.create_group(frame_id)
+            list_data = ["points, colors"]
+            grp.create_dataset("numpy_points", data=points)
+            grp.create_dataset("colors", data=colors)  # Store colors as a dataset
+
+            # Store only small metadata as attributes
+            grp.attrs["metadata_list"] = str(list_data)  # Ensure list_data is properly formatted
+            grp.attrs["timestamp"] = self.current_timestep
 
     def defect_location_callback(self, msg):
         msg.location.x += self.curr_position.x
