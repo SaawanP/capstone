@@ -11,16 +11,11 @@ from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
 
 import math
-import numpy as np
-from enum import Enum
 import open3d as o3d
 import cv2
 import yaml
-
-
-class State(Enum):
-    MANUAL = "Manual"
-    AUTONOMOUS = "Autonomous"
+import h5py
+import struct
 
 
 class Brain(Node):
@@ -30,41 +25,29 @@ class Brain(Node):
         # Constants
         self.declare_parameter('joy_range', 0)
         self.declare_parameter('max_speed', 0)
-        self.declare_parameter('operational_speed', 0)
 
-        # TODO fix numbers
         self.JOY_RANGE = self.get_parameter('joy_range').get_parameter_value().integer_value
         self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
-        self.OPERATIONAL_SPEED = self.get_parameter('operational_speed').get_parameter_value().integer_value
 
         # Subscribers and publishers
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
-        self.imu_sub = self.create_subscription(Imu, 'imu', self.imu_callback, 10)
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
-        self.depth_sub = self.create_subscription(Image, 'depth_map', self.autonomous_callback, 10)
         self.motor_sub = self.create_subscription(Vector3, 'controller_pose_position', self.motor_position_callback, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.save_report_to_file, 10)
 
         self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
-        self.position_pub = self.create_publisher(Vector3, 'robot_position', 10)
 
-        self.state = State.AUTONOMOUS
         self.bridge = CvBridge()
-        self.point_cloud = []
         self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
         self.last_velocity: Vector3 = Vector3()
         self.last_imu_msg = Imu()
         self.last_imu_msg.header.stamp = self.get_clock().now().to_msg()
+        self.current_timestep = 0
 
     def joy_callback(self, msg: Joy):
-        if msg.buttons[1] != 1:  # TODO fix index
-            self.state = State.AUTONOMOUS
-            return
-
-        self.state = State.MANUAL
         # All values are -1 to 1
         robot_speed = RobotSpeed()  # TODO fix index
         vx = 0
@@ -82,71 +65,34 @@ class Brain(Node):
         camera_speed.wy = msg.axes[1] / self.JOY_RANGE
         self.camera_speed_pub.publish(camera_speed)
 
-    def imu_callback(self, msg: Imu):
-        t1 = self.last_imu_msg.header.stamp.nanoseconds * 1e-9  # s
-        t2 = msg.header.stamp.nanoseconds * 1e-9  # s
-        dt = t2 - t1
-
-        dax = msg.linear_acceleration.x - self.last_imu_msg.linear_acceleration.x
-        day = msg.linear_acceleration.y - self.last_imu_msg.linear_acceleration.y
-        daz = msg.linear_acceleration.z - self.last_imu_msg.linear_acceleration.z
-
-        dvx = dt * self.last_imu_msg.linear_acceleration.x + dt * dax / 2
-        dvy = dt * self.last_imu_msg.linear_acceleration.y + dt * day / 2
-        dvz = dt * self.last_imu_msg.linear_acceleration.z + dt * daz / 2
-
-        dx = dt * self.last_velocity.x + dt * dvx / 2
-        dy = dt * self.last_velocity.y + dt * dvy / 2
-        dz = dt * self.last_velocity.z + dt * dvz / 2
-
-        self.curr_position.x += dx
-        self.curr_position.y += dy
-        self.curr_position.z += dz
-        self.position_pub.publish(self.curr_position)
-
-        self.last_velocity.x += dvx
-        self.last_velocity.y += dvy
-        self.last_velocity.z += dvz
-
     def pointcloud_callback(self, msg: PointCloud2):
-        points = list(pc2.read_points(msg, skip_nans=True))
-        self.point_cloud += points
+        colored_points = list(pc2.read_points(msg, skip_nans=True))
+        points = []
+        colors = []
+        for colored_point in colored_points:
+            point = colored_point[0: 3]
+            points.append(point)
+            b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
+            colors.append([r, g, b])
+
+        with h5py.File("data_storage.h5", "a") as f:
+            # Store points on file
+            self.current_timestep += 1
+            frame_id = f"{self.current_timestep}"
+            grp = f.create_group(frame_id)
+            list_data = ["points, colors"]
+            grp.create_dataset("numpy_points", data=points)
+            grp.create_dataset("colors", data=colors)  # Store colors as a dataset
+
+            # Store only small metadata as attributes
+            grp.attrs["metadata_list"] = str(list_data)  # Ensure list_data is properly formatted
+            grp.attrs["timestamp"] = self.current_timestep
 
     def defect_location_callback(self, msg):
         msg.location.x += self.curr_position.x
         msg.location.y += self.curr_position.y
         msg.location.z += self.curr_position.z
         self.defect_locations.append(msg)
-
-    def autonomous_callback(self, msg: Image):
-        if self.state == State.MANUAL:
-            return
-
-        # Calculate average deviation from center
-        depth = np.array(msg.data).reshape(msg.height, msg.width)
-        left_depth, right_depth = np.hsplit(depth, 2)
-        left_avg_dist = sum(sum(left_depth))
-        right_avg_dist = sum(sum(right_depth))
-        diff = right_avg_dist - left_avg_dist
-
-        # Turn robot proportional to deviation, largest turn_radius=sin(45 degrees)=1/sqrt2
-        speed = RobotSpeed()
-        turn_radius = math.sin(math.atan(diff) / 2)
-        speed.speed = self.OPERATIONAL_SPEED / self.MAX_SPEED
-        speed.turning_radius = turn_radius
-        speed.direction = 1
-        self.robot_speed_pub.publish(speed)
-
-        camera_speed = CameraSpeed()
-        camera_speed.reset = True
-        self.camera_speed_pub.publish(camera_speed)
-
-    def motor_position_callback(self, msg):
-        # TODO update curr position using motor position
-        dx = abs(msg.x - self.curr_position.x)
-        dy = abs(msg.y - self.curr_position.y)
-        dz = abs(msg.z - self.curr_position.z)
-        dist = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
     def save_report_to_file(self, msg):
         folder = msg.save_location + "/" + msg.report_name

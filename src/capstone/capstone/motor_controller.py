@@ -72,9 +72,9 @@ class MotorController(Node):
         tracking = self.get_parameter('tracking').get_parameter_value().bool_value
 
         # Subscribers and publishers
-        self.speed_sub = self.create_subscription(Speed,'robot_speed',self.speed_callback,10)
+        self.speed_sub = self.create_subscription(Speed, 'robot_speed', self.speed_callback,10)
 
-        self.position_pub = self.create_publisher(Vector3, 'controller_pose_position', 10)
+        self.position_pub = self.create_publisher(Vector3, 'position', 10)
 
         # Motor setup
         self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_RPM, tracking_name="M1" if tracking else None)
@@ -90,7 +90,7 @@ class MotorController(Node):
         self.PID1 = PID(self.M1, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki, tracking_name="PID1" if tracking else None)
         self.PID2 = PID(self.M2, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki, tracking_name="PID2" if tracking else None)
         self.PID_timer = self.create_timer(timer_period, self.PID_controller)
-        self.pose_timer = self.create_timer(timer_period,lambda:self.pose_estimation(timer_period))
+        self.pose_timer = self.create_timer(timer_period, lambda: self.pose_estimation(timer_period))
 
         if tracking:
             ani = FuncAnimation(plt.gcf(), speed_monitor, timer_period * 1000)
@@ -130,11 +130,11 @@ class MotorController(Node):
         right_rpm = self.M2.speed
         v = (left_rpm + right_rpm) * self.WHEEL_RADIUS / 2
         w = (left_rpm - right_rpm) * self.WHEEL_RADIUS / self.WIDTH
-        # TODO check the error for this estimation
 
         # Update position
         self.position.x += math.cos(self.angle) * v * dt
         self.position.y += math.sin(self.angle) * v * dt
+        self.position.z = 0
         self.position_pub.publish(self.position)
 
         # Update angle
