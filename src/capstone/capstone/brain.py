@@ -9,6 +9,7 @@ from sensor_msgs.msg import Joy
 from robot_interface.msg import RobotSpeed, CameraSpeed, Defect, Save
 from sensor_msgs.msg import Imu, Image, PointCloud2
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import Header
 
 import math
 import open3d as o3d
@@ -33,8 +34,8 @@ class Brain(Node):
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
-        self.motor_sub = self.create_subscription(Vector3, 'controller_pose_position', self.motor_position_callback, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.save_report_to_file, 10)
+        self.start_sub = self.create_subsciption(Save, 'start_report', self.start_runnning, 10)
 
         self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
@@ -46,8 +47,17 @@ class Brain(Node):
         self.last_imu_msg = Imu()
         self.last_imu_msg.header.stamp = self.get_clock().now().to_msg()
         self.current_timestep = 0
+        self.running = False
+        self.folder = ""
+
+    def start_runnning(self, msg):
+        self.running = True
+        self.folder = msg.save_location + "/" + msg.report_name
 
     def joy_callback(self, msg: Joy):
+        if not self.running:
+            return
+
         # All values are -1 to 1
         robot_speed = RobotSpeed()  # TODO fix index
         vx = 0
@@ -66,6 +76,9 @@ class Brain(Node):
         self.camera_speed_pub.publish(camera_speed)
 
     def pointcloud_callback(self, msg: PointCloud2):
+        if not self.running:
+            return
+
         colored_points = list(pc2.read_points(msg, skip_nans=True))
         points = []
         colors = []
@@ -75,7 +88,7 @@ class Brain(Node):
             b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
             colors.append([r, g, b])
 
-        with h5py.File("data_storage.h5", "a") as f:
+        with h5py.File(self.folder + "data_points.h5", "a") as f:
             # Store points on file
             self.current_timestep += 1
             frame_id = f"{self.current_timestep}"
@@ -89,25 +102,26 @@ class Brain(Node):
             grp.attrs["timestamp"] = self.current_timestep
 
     def defect_location_callback(self, msg):
+        if not self.running:
+            return
+
         msg.location.x += self.curr_position.x
         msg.location.y += self.curr_position.y
         msg.location.z += self.curr_position.z
         self.defect_locations.append(msg)
 
     def save_report_to_file(self, msg):
-        folder = msg.save_location + "/" + msg.report_name
-
         # Save pointcloud data
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.point_cloud)
-        pcd_location = folder + "/point_cloud." + msg.point_cloud_save_type
+        pcd_location = self.folder + "/point_cloud." + msg.point_cloud_save_type
         o3d.io.write_point_cloud(pcd_location, pcd)
 
         # Save defect images
         defects = {}
         for i, d in enumerate(self.defect_locations):
             location = (d.location.x, d.location.y, d.location.z)
-            image_location = folder + f"/crack_{i}.png"
+            image_location = self.folder + f"/crack_{i}.png"
             cv_image = self.bridge.imgmsg_to_cv2(d.image)
             cv2.imwrite(image_location, cv_image)
             defects[location] = image_location

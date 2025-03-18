@@ -48,10 +48,13 @@ class Camera(Node):
         self.last_servo_move = self.get_clock().now()
         self.camera_position = [0, 0]
         self.transformation = Transformation()
+        self.running = False
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
         self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
+        self.start_sub = self.create_subsciption(Save, 'start_report', self.start_runnning, 10)
+        self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)
 
         # TODO test using https://wiki.ros.org/image_view
         self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)
@@ -136,6 +139,9 @@ class Camera(Node):
         mono_right--|
 
         """
+
+    def start_runnning(self, msg):
+        self.running = True
 
     def speed_callback(self, msg):
         now = self.get_clock().now()
@@ -309,6 +315,8 @@ class Camera(Node):
         ros_pc = pc2.create_cloud(header, fields, pc)
         self.pointcloud_pub.publish(ros_pc)
 
+    def complete_run(self, msg):
+        self.running = False
 
 def main(args=None):
     rclpy.init(args=args)
@@ -320,7 +328,7 @@ def main(args=None):
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            while True:
+            while self.running:
                 in_detections = q_detections.get()
                 in_rgb = q_RGB.get()
                 in_pointcloud = q_pointcloud.get()
