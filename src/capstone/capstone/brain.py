@@ -17,6 +17,7 @@ import cv2
 import yaml
 import h5py
 import struct
+import time
 
 
 class Brain(Node):
@@ -49,10 +50,13 @@ class Brain(Node):
         self.current_timestep = 0
         self.running = False
         self.folder = ""
+        self.h5_file = None
 
     def start_runnning(self, msg):
         self.running = True
         self.folder = msg.save_location + "/" + msg.report_name
+        h5_filename = self.folder + 'data_points.h5'
+        self.h5_file = h5py.File(h5_filename, 'a')
 
     def joy_callback(self, msg: Joy):
         if not self.running:
@@ -79,27 +83,23 @@ class Brain(Node):
         if not self.running:
             return
 
-        colored_points = list(pc2.read_points(msg, skip_nans=True))
-        points = []
-        colors = []
-        for colored_point in colored_points:
-            point = colored_point[0: 3]
-            points.append(point)
+        colored_points = np.array(pc2.read_points(msg, skip_nans=True))
+        points = np.zeros(shape=(len(colored_points), 3))
+        colors = np.zeros(shape=(len(colored_points), 3))
+        for i, colored_point in enumerate(colored_points):
+            points[i] = colored_point[0: 3]
             b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
-            colors.append([r, g, b])
+            colors[i] = [r, g, b]
 
-        with h5py.File(self.folder + "data_points.h5", "a") as f:
-            # Store points on file
-            self.current_timestep += 1
-            frame_id = f"{self.current_timestep}"
-            grp = f.create_group(frame_id)
-            list_data = ["points, colors"]
-            grp.create_dataset("numpy_points", data=points)
-            grp.create_dataset("colors", data=colors)  # Store colors as a dataset
-
-            # Store only small metadata as attributes
-            grp.attrs["metadata_list"] = str(list_data)  # Ensure list_data is properly formatted
-            grp.attrs["timestamp"] = self.current_timestep
+        try:
+            frame_id = f"frame_{self.current_timestep}"
+            grp = self.h5_file.create_group(frame_id)
+            grp.create_dataset("points", data=points)
+            grp.create_dataset("colors", data=colors)
+            grp.attrs["timestamp"] = time.time()
+            self.h5_file.flush()
+        except Exception as e:
+            self.get_logger().error(f"Error saving to H5 file: {e}")
 
     def defect_location_callback(self, msg):
         if not self.running:
