@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QPoint
 from PySide6.QtWidgets import QApplication, QMainWindow
 from ui.new_interface import Ui_MainWindow  # Import the generated UI file
 from src.gui_functionality import GuiFunctions
+from src.backend import Backend
 from Custom_Widgets import *
 from Custom_Widgets.QAppSettings import QAppSettings
 import _icons_rc  # Make sure you have the resources loaded
@@ -48,6 +49,8 @@ class MainWindow(QMainWindow):
         QAppSettings.updateAppSettings(self)
 
         self.app_functions = GuiFunctions(self)
+        self.backend = Backend()
+
     def sassCompilationProgress(self, n):
         self.ui.activityProgress.setValue(n)
 
