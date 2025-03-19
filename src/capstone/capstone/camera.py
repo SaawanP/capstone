@@ -5,7 +5,7 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs_py import point_cloud2 as pc2
 
-from robot_interface.msg import Speed, Defect
+from robot_interface.msg import CameraSpeed, Defect, Save
 from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import Header
@@ -18,7 +18,7 @@ import math
 import numpy as np
 import struct
 
-from capstone.transformation_matrix.py import Transformation
+from capstone.transformation_matrix import Transformation
 from capstone.motor import Servo
 import RPi.GPIO as GPIO
 
@@ -51,7 +51,7 @@ class Camera(Node):
         self.running = False
 
         # Subscribers and publishers
-        self.speed_sub = self.create_subscription(Speed, 'camera_speed', self.speed_callback, 10)
+        self.speed_sub = self.create_subscription(CameraSpeed, 'camera_speed', self.speed_callback, 10)
         self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
         self.start_sub = self.create_subsciption(Save, 'start_report', self.start_runnning, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)

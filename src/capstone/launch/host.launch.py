@@ -13,6 +13,12 @@ def generate_launch_description():
         'host_launch.yaml'
     )
 
+    brain_node = Node(
+        package="capstone",
+        executable="brain",
+        parameters=[host_config]
+    )
+
     backend_node = Node(
         package="capstone",
         executable="backend",
@@ -26,5 +32,6 @@ def generate_launch_description():
 
     ld.add_action(backend_node)
     ld.add_action(joy_node)
+    ld.add_action(brain_node)
 
     return ld

@@ -14,11 +14,6 @@ def generate_launch_description():
         'robot_launch.yaml'
     )
 
-    brain_node = Node(
-        package="capstone",
-        executable="brain",
-        parameters=[robot_config]
-    )
     camera_node = Node(
         package="capstone",
         executable="camera",
@@ -31,7 +26,6 @@ def generate_launch_description():
     )
 
 
-    ld.add_action(brain_node)
     ld.add_action(camera_node)
     ld.add_action(motor_controller)
 

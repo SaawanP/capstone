@@ -26,7 +26,7 @@ class Brain(Node):
 
         # Constants
         self.declare_parameter('joy_range', 0)
-        self.declare_parameter('max_speed', 0)
+        self.declare_parameter('max_speed', 0.0)
 
         self.JOY_RANGE = self.get_parameter('joy_range').get_parameter_value().integer_value
         self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
@@ -36,7 +36,7 @@ class Brain(Node):
         self.pointcloud_sub = self.create_subscription(PointCloud2, 'point_cloud', self.pointcloud_callback, 10)
         self.defect_sub = self.create_subscription(Defect, 'defect_location', self.defect_location_callback, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.save_report_to_file, 10)
-        self.start_sub = self.create_subsciption(Save, 'start_report', self.start_runnning, 10)
+        self.start_sub = self.create_subscription(Save, 'start_report', self.start_running, 10)
 
         self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
@@ -52,7 +52,7 @@ class Brain(Node):
         self.folder = ""
         self.h5_file = None
 
-    def start_runnning(self, msg):
+    def start_running(self, msg):
         self.running = True
         self.folder = msg.save_location + "/" + msg.report_name
         h5_filename = self.folder + 'data_points.h5'
