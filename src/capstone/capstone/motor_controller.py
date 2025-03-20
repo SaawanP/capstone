@@ -105,9 +105,9 @@ class MotorController(Node):
 
 def main(args=None):
     rclpy.init(args=args)
+    GPIO.setmode(GPIO.BCM)
     motor_controller = MotorController()
     try:
-        GPIO.setmode(GPIO.BCM)
         rclpy.spin(motor_controller)
     finally:
         motor_controller.M1.shutdown()

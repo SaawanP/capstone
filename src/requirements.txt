@@ -101,3 +101,4 @@ zipp==3.21.0
 h5py
 open3d
 depthai
+scipy
