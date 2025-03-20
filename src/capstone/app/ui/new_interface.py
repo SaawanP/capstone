@@ -54,26 +54,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 5, 0)
-        self.frame = QFrame(self.leftMenuSubContainer)
-        self.frame.setObjectName(u"frame")
-        self.frame.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Shadow.Raised)
-        self.horizontalLayout_2 = QHBoxLayout(self.frame)
-        self.horizontalLayout_2.setSpacing(0)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.menuBtn = QPushButton(self.frame)
-        self.menuBtn.setObjectName(u"menuBtn")
-        icon = QIcon()
-        icon.addFile(u":/feather/Qss/Icons/feather/menu.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.menuBtn.setIcon(icon)
-        self.menuBtn.setIconSize(QSize(16, 16))
-
-        self.horizontalLayout_2.addWidget(self.menuBtn, 0, Qt.AlignmentFlag.AlignLeft)
-
-
-        self.verticalLayout_2.addWidget(self.frame, 0, Qt.AlignmentFlag.AlignTop)
-
         self.frame_2 = QFrame(self.leftMenuSubContainer)
         self.frame_2.setObjectName(u"frame_2")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
@@ -81,12 +61,20 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame_2.sizePolicy().hasHeightForWidth())
         self.frame_2.setSizePolicy(sizePolicy)
-        self.frame_2.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_2.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_2.setFrameShape(QFrame.NoFrame)
         self.verticalLayout_3 = QVBoxLayout(self.frame_2)
         self.verticalLayout_3.setSpacing(5)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.verticalLayout_3.setContentsMargins(0, 15, 0, 10)
+        self.menuBtn = QPushButton(self.frame_2)
+        self.menuBtn.setObjectName(u"menuBtn")
+        icon = QIcon()
+        icon.addFile(u":/feather/Qss/Icons/feather/menu.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.menuBtn.setIcon(icon)
+        self.menuBtn.setIconSize(QSize(16, 16))
+
+        self.verticalLayout_3.addWidget(self.menuBtn)
+
         self.homeBtn = QPushButton(self.frame_2)
         self.homeBtn.setObjectName(u"homeBtn")
         icon1 = QIcon()
@@ -115,16 +103,15 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.reportBtn)
 
 
-        self.verticalLayout_2.addWidget(self.frame_2, 0, Qt.AlignmentFlag.AlignTop)
+        self.verticalLayout_2.addWidget(self.frame_2)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.verticalLayout_2.addItem(self.verticalSpacer)
 
         self.frame_3 = QFrame(self.leftMenuSubContainer)
         self.frame_3.setObjectName(u"frame_3")
-        self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_3.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_3.setFrameShape(QFrame.NoFrame)
         self.verticalLayout_4 = QVBoxLayout(self.frame_3)
         self.verticalLayout_4.setSpacing(5)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -157,7 +144,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.helpBtn)
 
 
-        self.verticalLayout_2.addWidget(self.frame_3, 0, Qt.AlignmentFlag.AlignBottom)
+        self.verticalLayout_2.addWidget(self.frame_3)
 
 
         self.verticalLayout.addWidget(self.leftMenuSubContainer)
@@ -190,8 +177,7 @@ class Ui_MainWindow(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.frame_6.sizePolicy().hasHeightForWidth())
         self.frame_6.setSizePolicy(sizePolicy2)
-        self.frame_6.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_6.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_6.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_6 = QHBoxLayout(self.frame_6)
         self.horizontalLayout_6.setSpacing(5)
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
@@ -230,8 +216,7 @@ class Ui_MainWindow(object):
         self.frame_5.setObjectName(u"frame_5")
         sizePolicy2.setHeightForWidth(self.frame_5.sizePolicy().hasHeightForWidth())
         self.frame_5.setSizePolicy(sizePolicy2)
-        self.frame_5.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_5.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_5.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_7 = QHBoxLayout(self.frame_5)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
@@ -242,8 +227,7 @@ class Ui_MainWindow(object):
         self.frame_7.setObjectName(u"frame_7")
         sizePolicy2.setHeightForWidth(self.frame_7.sizePolicy().hasHeightForWidth())
         self.frame_7.setSizePolicy(sizePolicy2)
-        self.frame_7.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_7.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_7.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_4 = QHBoxLayout(self.frame_7)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
@@ -275,7 +259,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_5.addWidget(self.frame_7)
 
 
-        self.verticalLayout_10.addWidget(self.headerContainer, 0, Qt.AlignmentFlag.AlignTop)
+        self.verticalLayout_10.addWidget(self.headerContainer)
 
         self.mainBodyContent = QWidget(self.mainBodyContainer)
         self.mainBodyContent.setObjectName(u"mainBodyContent")
@@ -294,7 +278,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_4 = QWidget()
         self.scrollAreaWidgetContents_4.setObjectName(u"scrollAreaWidgetContents_4")
-        self.scrollAreaWidgetContents_4.setGeometry(QRect(0, 0, 675, 541))
+        self.scrollAreaWidgetContents_4.setGeometry(QRect(0, 0, 416, 543))
         self.horizontalLayout_20 = QHBoxLayout(self.scrollAreaWidgetContents_4)
         self.horizontalLayout_20.setSpacing(0)
         self.horizontalLayout_20.setObjectName(u"horizontalLayout_20")
@@ -307,13 +291,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.video_label = QLabel(self.home_page)
         self.video_label.setObjectName(u"video_label")
-        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_3.addWidget(self.video_label)
 
         self.picture_label = QLabel(self.home_page)
         self.picture_label.setObjectName(u"picture_label")
-        self.picture_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_3.addWidget(self.picture_label)
 
@@ -326,7 +308,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_28.setContentsMargins(5, 5, 5, 5)
         self.label_9 = QLabel(self.gantt)
         self.label_9.setObjectName(u"label_9")
-        self.label_9.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_28.addWidget(self.label_9)
 
@@ -339,7 +320,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_29.setContentsMargins(5, 5, 5, 5)
         self.label_13 = QLabel(self.data_page)
         self.label_13.setObjectName(u"label_13")
-        self.label_13.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_29.addWidget(self.label_13)
 
@@ -352,7 +332,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_30.setContentsMargins(5, 5, 5, 5)
         self.label_16 = QLabel(self.reports_page)
         self.label_16.setObjectName(u"label_16")
-        self.label_16.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_30.addWidget(self.label_16)
 
@@ -381,15 +360,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
         self.frame_17 = QFrame(self.rightMenuContainer)
         self.frame_17.setObjectName(u"frame_17")
-        self.frame_17.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_17.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_17.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_19 = QHBoxLayout(self.frame_17)
         self.horizontalLayout_19.setObjectName(u"horizontalLayout_19")
         self.label_10 = QLabel(self.frame_17)
         self.label_10.setObjectName(u"label_10")
         sizePolicy1.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
         self.label_10.setSizePolicy(sizePolicy1)
-        self.label_10.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_19.addWidget(self.label_10)
 
@@ -400,12 +377,12 @@ class Ui_MainWindow(object):
         self.closeRightMenuBtn.setIcon(icon13)
         self.closeRightMenuBtn.setIconSize(QSize(16, 16))
 
-        self.horizontalLayout_19.addWidget(self.closeRightMenuBtn, 0, Qt.AlignmentFlag.AlignRight)
+        self.horizontalLayout_19.addWidget(self.closeRightMenuBtn)
 
 
         self.verticalLayout_6.addWidget(self.frame_17)
 
-        self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.verticalLayout_6.addItem(self.verticalSpacer_5)
 
@@ -417,7 +394,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_33.setObjectName(u"verticalLayout_33")
         self.label_17 = QLabel(self.profile_page)
         self.label_17.setObjectName(u"label_17")
-        self.label_17.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_33.addWidget(self.label_17)
 
@@ -429,7 +405,7 @@ class Ui_MainWindow(object):
         self.label_5 = QLabel(self.notification_page)
         self.label_5.setObjectName(u"label_5")
 
-        self.verticalLayout_11.addWidget(self.label_5, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.verticalLayout_11.addWidget(self.label_5)
 
         self.rightMenuPages.addWidget(self.notification_page)
         self.more_page = QWidget()
@@ -437,7 +413,6 @@ class Ui_MainWindow(object):
         self.label_18 = QLabel(self.more_page)
         self.label_18.setObjectName(u"label_18")
         self.label_18.setGeometry(QRect(9, 9, 41, 16))
-        self.label_18.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.rightMenuPages.addWidget(self.more_page)
         self.page = QWidget()
         self.page.setObjectName(u"page")
@@ -448,14 +423,12 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.label_2 = QLabel(self.settings_page)
         self.label_2.setObjectName(u"label_2")
-        self.label_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_7.addWidget(self.label_2)
 
         self.frame_13 = QFrame(self.settings_page)
         self.frame_13.setObjectName(u"frame_13")
-        self.frame_13.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_13.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_13.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_14 = QHBoxLayout(self.frame_13)
         self.horizontalLayout_14.setSpacing(0)
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
@@ -480,7 +453,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
         self.label_4 = QLabel(self.help_page)
         self.label_4.setObjectName(u"label_4")
-        self.label_4.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_9.addWidget(self.label_4)
 
@@ -491,7 +463,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_8.setObjectName(u"verticalLayout_8")
         self.label_3 = QLabel(self.info_page)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_8.addWidget(self.label_3)
 
@@ -499,12 +470,12 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6.addWidget(self.rightMenuPages)
 
-        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.verticalLayout_6.addItem(self.verticalSpacer_4)
 
 
-        self.horizontalLayout_8.addWidget(self.rightMenuContainer, 0, Qt.AlignmentFlag.AlignRight)
+        self.horizontalLayout_8.addWidget(self.rightMenuContainer)
 
 
         self.verticalLayout_10.addWidget(self.mainBodyContent)
@@ -517,8 +488,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_11.setContentsMargins(0, 7, 0, 0)
         self.frame_10 = QFrame(self.footerContainter)
         self.frame_10.setObjectName(u"frame_10")
-        self.frame_10.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_10.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_10.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_12 = QHBoxLayout(self.frame_10)
         self.horizontalLayout_12.setSpacing(0)
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -533,8 +503,7 @@ class Ui_MainWindow(object):
 
         self.frame_14 = QFrame(self.footerContainter)
         self.frame_14.setObjectName(u"frame_14")
-        self.frame_14.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_14.setFrameShadow(QFrame.Shadow.Raised)
+        self.frame_14.setFrameShape(QFrame.NoFrame)
         self.horizontalLayout_15 = QHBoxLayout(self.frame_14)
         self.horizontalLayout_15.setSpacing(0)
         self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
@@ -545,29 +514,27 @@ class Ui_MainWindow(object):
         font1.setPointSize(9)
         self.activityLabel.setFont(font1)
 
-        self.horizontalLayout_15.addWidget(self.activityLabel, 0, Qt.AlignmentFlag.AlignRight)
+        self.horizontalLayout_15.addWidget(self.activityLabel)
 
         self.activityProgress = QProgressBar(self.frame_14)
         self.activityProgress.setObjectName(u"activityProgress")
         self.activityProgress.setMinimumSize(QSize(0, 10))
         self.activityProgress.setMaximumSize(QSize(16777215, 10))
         self.activityProgress.setValue(100)
-        self.activityProgress.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
         self.activityProgress.setInvertedAppearance(False)
 
-        self.horizontalLayout_15.addWidget(self.activityProgress, 0, Qt.AlignmentFlag.AlignRight)
+        self.horizontalLayout_15.addWidget(self.activityProgress)
 
 
-        self.horizontalLayout_11.addWidget(self.frame_14, 0, Qt.AlignmentFlag.AlignRight)
+        self.horizontalLayout_11.addWidget(self.frame_14)
 
         self.sizeGrip = QFrame(self.footerContainter)
         self.sizeGrip.setObjectName(u"sizeGrip")
         self.sizeGrip.setMinimumSize(QSize(20, 20))
         self.sizeGrip.setMaximumSize(QSize(20, 20))
-        self.sizeGrip.setFrameShape(QFrame.Shape.StyledPanel)
-        self.sizeGrip.setFrameShadow(QFrame.Shadow.Raised)
+        self.sizeGrip.setFrameShape(QFrame.NoFrame)
 
-        self.horizontalLayout_11.addWidget(self.sizeGrip, 0, Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignBottom)
+        self.horizontalLayout_11.addWidget(self.sizeGrip)
 
 
         self.verticalLayout_10.addWidget(self.footerContainter)
@@ -611,7 +578,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.infoBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Information about the app", None))
 #endif // QT_CONFIG(tooltip)
-        self.infoBtn.setText(QCoreApplication.translate("MainWindow", u"Information", None))
+        self.infoBtn.setText(QCoreApplication.translate("MainWindow", u"Info", None))
 #if QT_CONFIG(tooltip)
         self.helpBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Get more help", None))
 #endif // QT_CONFIG(tooltip)
