@@ -105,16 +105,16 @@ class MotorController(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    GPIO.setmode(GPIO.BCM)
-    motor_controller = MotorController()
     try:
+        GPIO.setmode(GPIO.BCM)
+        motor_controller = MotorController()
         rclpy.spin(motor_controller)
     finally:
+        rclpy.shutdown()
+        GPIO.cleanup()
         motor_controller.M1.shutdown()
         motor_controller.M2.shutdown()
         motor_controller.destroy_node()
-        rclpy.shutdown()
-        GPIO.cleanup()
 
 
 if __name__ == '__main__':

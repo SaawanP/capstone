@@ -320,9 +320,9 @@ class Camera(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    GPIO.setmode(GPIO.BCM)
-    camera = Camera()
     try:
+        GPIO.setmode(GPIO.BCM)
+        camera = Camera()
         with dai.Device(camera.pipeline) as device:
             q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
