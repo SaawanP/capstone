@@ -46,7 +46,7 @@ matplotlib-inline==0.1.7
 mock==5.1.0
 nbformat==5.10.4
 nest-asyncio==1.6.0
-numpy==2.2.2
+numpy==1.22.4
 open3d==0.19.0
 opencv-python==4.11.0.86
 packaging==24.2
@@ -98,3 +98,6 @@ webencodings==0.5.1
 Werkzeug==3.0.6
 widgetsnbextension==4.0.13
 zipp==3.21.0
+h5py
+open3d
+depthai

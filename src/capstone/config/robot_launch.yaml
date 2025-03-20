@@ -1,9 +1,3 @@
-brain:
-  ros__parameters:
-    joy_range: 32768 # 2^15, the last bit is for sign
-    max_speed: 1.412 # m/min, ensure that max_rpm * circ = max_speed
-    operational_speed: 1 # m/min
-
 camera:
   ros__parameters:
     max_camera_speed: 5 # degrees/sec
