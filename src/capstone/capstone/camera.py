@@ -53,7 +53,7 @@ class Camera(Node):
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(CameraSpeed, 'camera_speed', self.speed_callback, 10)
         self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
-        self.start_sub = self.create_subsciption(Save, 'start_report', self.start_runnning, 10)
+        self.start_sub = self.create_subscription(Save, 'start_report', self.start_runnning, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)
 
         # TODO test using https://wiki.ros.org/image_view
@@ -328,7 +328,7 @@ def main(args=None):
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            while self.running:
+            while camera.running:
                 in_detections = q_detections.get()
                 in_rgb = q_RGB.get()
                 in_pointcloud = q_pointcloud.get()

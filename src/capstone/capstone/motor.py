@@ -22,7 +22,7 @@ class Motor:
         GPIO.setup(self.in1, GPIO.OUT)
         GPIO.setup(self.in2, GPIO.OUT)
         GPIO.setup(self.en, GPIO.OUT)
-        self.pwm = GPIO.pwm(self.en, 1000)
+        self.pwm = GPIO.PWM(self.en, 1000)
         self.pwm.start(0)
 
         GPIO.setup(self.enc_A, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
