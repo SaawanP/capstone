@@ -67,24 +67,27 @@ class DeviceController(Node):
     def speed_callback(self, msg):
         speed = msg.speed * self.MAX_SPEED
 
-        if msg.turning_radius == 0:
-            self.left_rpm = self.right_rpm = speed / self.WHEEL_RADIUS
-            return
+        # if msg.turning_radius == 0:
+        #     self.left_rpm = self.right_rpm = speed / self.WHEEL_RADIUS
+        #     return
 
-        self.turning_radius = r = msg.turning_radius  # cm
-        ang_speed = speed / r
-        s1 = speed + self.WIDTH * ang_speed / 2
-        s2 = speed - self.WIDTH * ang_speed / 2
-        w1 = (s1 + (self.LENGTH * ang_speed / 2) ** 2 / s1) / self.WHEEL_RADIUS
-        w2 = (s2 + (self.LENGTH * ang_speed / 2) ** 2 / s2) / self.WHEEL_RADIUS
+        # self.turning_radius = r = msg.turning_radius  # cm
+        # ang_speed = speed / r
+        # s1 = speed + self.WIDTH * ang_speed / 2
+        # s2 = speed - self.WIDTH * ang_speed / 2
+        # w1 = (s1 + (self.LENGTH * ang_speed / 2) ** 2 / s1) / self.WHEEL_RADIUS
+        # w2 = (s2 + (self.LENGTH * ang_speed / 2) ** 2 / s2) / self.WHEEL_RADIUS
 
-        if msg.turning_radius > 0:
-            self.right_rpm = w1
-            self.left_rpm = w2
-        else:
-            self.right_rpm = w2
-            self.left_rpm = w1
+        # if msg.turning_radius > 0:
+        #     self.right_rpm = w1
+        #     self.left_rpm = w2
+        # else:
+        #     self.right_rpm = w2
+        #     self.left_rpm = w1
         
+        self.left_rpm = speed / self.WHEEL_RADIUS
+        self.right_rpm = speed / self.WHEEL_RADIUS 
+
         self.M_left.set_rpm(self.left_rpm)
         self.M_right.set_rpm(self.right_rpm)
         self.led.set_state(msg.lights)
