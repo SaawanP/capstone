@@ -13,7 +13,7 @@ import RPi.GPIO as GPIO
 
 class DeviceController(Node):
     def __init__(self):
-        super().__init__('motor_controller')
+        super().__init__('device_controller')
 
         # Constants
         self.declare_parameter('max_rpm', 10)
