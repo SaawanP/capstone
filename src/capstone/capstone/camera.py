@@ -28,10 +28,10 @@ class Camera(Node):
         super().__init__('camera')
 
         # Constants
-        self.declare_parameter('max_camera_speed', 0.0)
-        self.declare_parameter('max_camera_range', 30)
+        self.declare_parameter('max_camera_speed', 0.5)
+        self.declare_parameter('max_camera_range', 20)
         self.declare_parameter('starting_camera_angle', 90)
-        self.declare_parameter('fps', 0)
+        self.declare_parameter('fps', 30)
 
         self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().double_value
         self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value

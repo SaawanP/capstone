@@ -16,14 +16,14 @@ class DeviceController(Node):
         super().__init__('motor_controller')
 
         # Constants
-        self.declare_parameter('max_rpm')
-        self.declare_parameter('radius', 0.0)
-        self.declare_parameter('length', 0.0)
-        self.declare_parameter('circ', 0.0)
-        self.declare_parameter('width', 0.0)
-        self.declare_parameter('Kp', 0.0)
-        self.declare_parameter('Ki', 0.0)
-        self.declare_parameter('Kd', 0.0)
+        self.declare_parameter('max_rpm', 10)
+        self.declare_parameter('radius', 0.02247)
+        self.declare_parameter('length', 0.149)
+        self.declare_parameter('circ', 0.1412)
+        self.declare_parameter('width', 0.1218)
+        self.declare_parameter('Kp', 1.0)
+        self.declare_parameter('Ki', 1.0)
+        self.declare_parameter('Kd', 1.0)
 
         # TODO move parameters to ROS param
         self.MAX_RPM = self.get_parameter('max_rpm').get_parameter_value().integer_value

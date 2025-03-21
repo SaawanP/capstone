@@ -26,8 +26,8 @@ class Brain(Node):
         super().__init__('brain')
 
         # Constants
-        self.declare_parameter('max_speed', 0.0)
-        self.declare_parameter('max_track_angle', 0)
+        self.declare_parameter('max_speed', 1.412)
+        self.declare_parameter('max_track_angle', 40)
 
         self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
         self.MAX_TRACK_ANGLE = self.get_parameter('max_track_angle').get_parameter_value().integer_value
