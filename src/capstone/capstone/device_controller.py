@@ -84,12 +84,13 @@ class DeviceController(Node):
         else:
             self.right_rpm = w2
             self.left_rpm = w1
-
-        self.get_logger().debug(
-            f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
         
         self.led.set_state(msg.lights)
         self.servo_track.set_angle(msg.track_angle)
+        self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
+        self.get_logger().info(f"lights state {msg.lights}")
+        self.get_logger().info(f"track angle {msg.track_angle}")
+
 
     def PID_controller(self):
         self.PID_left.set_target_rpm(self.left_rpm)
