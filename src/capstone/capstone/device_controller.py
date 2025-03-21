@@ -16,7 +16,7 @@ class DeviceController(Node):
         super().__init__('motor_controller')
 
         # Constants
-        self.declare_parameter('max_rpm', 0)
+        self.declare_parameter('max_rpm')
         self.declare_parameter('radius', 0.0)
         self.declare_parameter('length', 0.0)
         self.declare_parameter('circ', 0.0)
