@@ -65,7 +65,7 @@ class DeviceController(Node):
 
 
     def speed_callback(self, msg):
-        speed = msg.speed * self.MAX_SPEED
+        # speed = msg.speed * self.MAX_SPEED
 
         # if msg.turning_radius == 0:
         #     self.left_rpm = self.right_rpm = speed / self.WHEEL_RADIUS
@@ -85,8 +85,8 @@ class DeviceController(Node):
         #     self.right_rpm = w2
         #     self.left_rpm = w1
         
-        self.left_rpm = speed / self.WHEEL_RADIUS
-        self.right_rpm = speed / self.WHEEL_RADIUS 
+        self.left_rpm = msg.speed * self.MAX_RPM
+        self.right_rpm = msg.speed * self.MAX_RPM
 
         self.M_left.set_rpm(self.left_rpm)
         self.M_right.set_rpm(self.right_rpm)
