@@ -35,7 +35,6 @@ class DeviceController(Node):
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
-        self.get_logger().info(f"{self.MAX_RPM}")
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(RobotSpeed, 'robot_speed', self.speed_callback,10)

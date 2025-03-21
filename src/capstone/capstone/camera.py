@@ -337,6 +337,7 @@ def main(args=None):
         GPIO.setmode(GPIO.BCM)
         camera = Camera()
         with dai.Device(camera.pipeline) as device:
+            camera.get_logger().info("Device connected")
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
