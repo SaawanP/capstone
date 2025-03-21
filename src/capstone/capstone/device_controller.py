@@ -105,7 +105,7 @@ class DeviceController(Node):
         # Update position
         self.position.x += math.cos(self.angle) * v * dt
         self.position.y += math.sin(self.angle) * v * dt
-        self.position.z = 0
+        self.position.z = 0.0
         self.position_pub.publish(self.position)
 
         # Update angle
