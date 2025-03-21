@@ -342,7 +342,7 @@ def main(args=None):
             # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            while camera.running:
+            while True:
                 in_rgb = q_RGB.get()
             #     # in_detections = q_detections.get()
             #     # in_pointcloud = q_pointcloud.get()
