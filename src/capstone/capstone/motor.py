@@ -119,6 +119,7 @@ class PID:
 
 class Servo:
     def __init__(self, pin, starting_angle=0):
+        GPIO.setmode(GPIO.BCM)
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
         GPIO.output(self.pin, 1)
