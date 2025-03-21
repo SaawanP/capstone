@@ -54,7 +54,7 @@ class DeviceController(Node):
         timer_period = 0.1  # s TODO find best period
         self.PID_left = PID(self.M_left, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
         self.PID_right = PID(self.M_right, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
-        self.PID_timer = self.create_timer(timer_period, self.PID_controller)
+        # self.PID_timer = self.create_timer(timer_period, self.PID_controller)
         self.pose_timer = self.create_timer(timer_period, lambda: self.pose_estimation(timer_period))
 
         # Track servo
@@ -85,6 +85,8 @@ class DeviceController(Node):
             self.right_rpm = w2
             self.left_rpm = w1
         
+        self.M_left.set_rpm(self.left_rpm)
+        self.M_right.set_rpm(self.right_rpm)
         self.led.set_state(msg.lights)
         self.servo_track.set_angle(msg.track_angle)
         self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
