@@ -1,18 +1,17 @@
 camera:
   ros__parameters:
-    max_camera_speed: 5 # degrees/sec
-    max_camera_range: 30
+    max_camera_speed: 0.5 # degrees/sec
+    max_camera_range: 20
     starting_camera_angle: 90
     fps: 30
 
-motor_controller:
+device_controller:
   ros__parameters:
     max_rpm: 10 # rpm
     radius: 0.02247 # m
     length: 0.149 # m
     circ: 0.1412 # m
     width: 0.1218 # m, width from wheel to wheel
-    tracking: True
 
     # PID parameters
     Kp: 1.0

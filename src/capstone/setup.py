@@ -53,7 +53,7 @@ setup(
             'backend=capstone.backend:main',
             'brain=capstone.brain:main',
             'camera=capstone.camera:main',
-            'motor_controller=capstone.motor_controller:main',
+            'device_controller=capstone.device_controller:main',
             # Add entry point for the app
             'gui_app=app.main:main',
         ],

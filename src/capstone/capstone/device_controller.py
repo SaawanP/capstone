@@ -7,7 +7,7 @@ from robot_interface.msg import RobotSpeed
 from geometry_msgs.msg import Vector3
 
 import math
-from capstone.motor import Motor, PID
+from capstone.motor import Motor, PID, Servo, LED
 import RPi.GPIO as GPIO
 
 
@@ -21,7 +21,6 @@ class MotorController(Node):
         self.declare_parameter('length', 0.0)
         self.declare_parameter('circ', 0.0)
         self.declare_parameter('width', 0.0)
-        self.declare_parameter('tracking', False)
         self.declare_parameter('Kp', 0.0)
         self.declare_parameter('Ki', 0.0)
         self.declare_parameter('Kd', 0.0)
@@ -36,7 +35,6 @@ class MotorController(Node):
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
-        tracking = self.get_parameter('tracking').get_parameter_value().bool_value
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(RobotSpeed, 'robot_speed', self.speed_callback,10)
@@ -44,8 +42,8 @@ class MotorController(Node):
         self.position_pub = self.create_publisher(Vector3, 'position', 10)
 
         # Motor setup
-        self.M1 = Motor(9, 10, 11, 12, 13, self.MAX_RPM)
-        self.M2 = Motor(14, 15, 16, 17, 18, self.MAX_RPM)
+        self.M_left = Motor(5, 6, 13, 19, 26, self.MAX_RPM)
+        self.M_right = Motor(14, 15, 18, 23, 24, self.MAX_RPM)
         self.left_rpm = 0
         self.right_rpm = 0
         self.angle = 0
@@ -54,10 +52,17 @@ class MotorController(Node):
 
         # PID setup
         timer_period = 0.1  # s TODO find best period
-        self.PID1 = PID(self.M1, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
-        self.PID2 = PID(self.M2, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
+        self.PID_left = PID(self.M_left, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
+        self.PID_right = PID(self.M_right, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
         self.PID_timer = self.create_timer(timer_period, self.PID_controller)
         self.pose_timer = self.create_timer(timer_period, lambda: self.pose_estimation(timer_period))
+
+        # Track servo
+        self.servo_track = Servo(17)
+
+        # Led
+        self.led = LED(25)
+
 
     def speed_callback(self, msg):
         speed = msg.speed * self.MAX_SPEED
@@ -82,14 +87,17 @@ class MotorController(Node):
 
         self.get_logger().debug(
             f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
+        
+        self.led.set_state(msg.lights)
+        self.servo_track.set_angle(msg.track_angle)
 
     def PID_controller(self):
-        self.PID1.set_target_rpm(self.left_rpm)
-        self.PID2.set_target_rpm(self.right_rpm)
+        self.PID_left.set_target_rpm(self.left_rpm)
+        self.PID_right.set_target_rpm(self.right_rpm)
 
     def pose_estimation(self, dt):
-        left_rpm = self.M1.speed
-        right_rpm = self.M2.speed
+        left_rpm = self.M_left.speed
+        right_rpm = self.M_right.speed
         v = (left_rpm + right_rpm) * self.WHEEL_RADIUS / 2
         w = (left_rpm - right_rpm) * self.WHEEL_RADIUS / self.WIDTH
 
@@ -110,8 +118,8 @@ def main(args=None):
         motor_controller = MotorController()
         rclpy.spin(motor_controller)
     finally:
-        motor_controller.M1.shutdown()
-        motor_controller.M2.shutdown()
+        motor_controller.M_left.shutdown()
+        motor_controller.M_right.shutdown()
         motor_controller.destroy_node()
         rclpy.shutdown()
         GPIO.cleanup()

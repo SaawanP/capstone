@@ -136,3 +136,13 @@ class Servo:
 
     def shutdown(self):
         self.pwm.stop()
+
+class LED:
+    def __init__(self, pin):
+        GPIO.setup(pin,GPIO.OUT)
+
+    def set_state(self, state):
+        if state:
+            GPIO.output(18,GPIO.HIGH)
+        else:
+            GPIO.output(18,GPIO.LOW)
