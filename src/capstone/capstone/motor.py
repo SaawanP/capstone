@@ -118,7 +118,7 @@ class PID:
 
 
 class Servo:
-    def __init__(self, pin, starting_angle=0):
+    def __init__(self, pin, starting_angle=0, logger=None):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
         GPIO.output(self.pin, 1)
@@ -126,10 +126,13 @@ class Servo:
         self.pwm.start(7)  # Start servo at 90 degrees
         self.angle = starting_angle
         self.set_angle(self.angle)
+        self.logger = logger
 
     def set_angle(self, angle):
         self.angle = angle
-        duty = angle / 18 + 2
+        duty = angle / 18 + 2.5
+        if self.logger:
+            self.logger.info(f"duty for servo {duty}")
         self.pwm.ChangeDutyCycle(duty)
 
     def reset(self):

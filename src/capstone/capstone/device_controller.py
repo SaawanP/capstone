@@ -58,7 +58,7 @@ class DeviceController(Node):
         self.pose_timer = self.create_timer(timer_period, lambda: self.pose_estimation(timer_period))
 
         # Track servo
-        self.servo_track = Servo(22)
+        self.servo_track = Servo(22, logger=self.get_logger())
 
         # Led
         self.led = LED(25)
