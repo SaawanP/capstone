@@ -44,9 +44,11 @@ class Motor:
 
     def convert_to_duty(self, x):
         if x > self.max_rpm:
-            raise ValueError(f"Needed speed of {x} is higher than max speed of {self.max_rpm}")
+            # raise ValueError(f"Needed speed of {x} is higher than max speed of {self.max_rpm}")
+            x = self.max_rpm
         elif x < 0:
-            raise ValueError(f"Needed speed of {x} is less than 0")
+            # raise ValueError(f"Needed speed of {x} is less than 0")
+            x = 0
 
         return (x * 100) // self.max_rpm
 
