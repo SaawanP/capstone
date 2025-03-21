@@ -125,8 +125,8 @@ class Servo:
         self.pwm = GPIO.PWM(self.pin, 50)
         self.pwm.start(7)  # Start servo at 90 degrees
         self.angle = starting_angle
-        self.set_angle(self.angle)
         self.logger = logger
+        self.set_angle(self.angle)
 
     def set_angle(self, angle):
         self.angle = angle
