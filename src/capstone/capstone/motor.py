@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class Motor:
-    def __init__(self, in1, in2, en, enc_A, enc_B, max_rpm, encoder_ticks=350):
+    def __init__(self, in1, in2, en, enc_A, enc_B, max_rpm, encoder_ticks=350, logger=None):
         self.max_rpm = max_rpm
         self.encoder_ticks = encoder_ticks
         self.in1 = in1
@@ -17,6 +17,7 @@ class Motor:
         self.last_pos = 0
         self.last_event_time = time.time()
         self.speed = 0
+        self.logger = logger
 
         # Pin setup
         GPIO.setup(self.in1, GPIO.OUT)
@@ -55,6 +56,8 @@ class Motor:
     def set_rpm(self, rpm):
         duty = self.convert_to_duty(abs(rpm))
         self.pwm.ChangeDutyCycle(duty)
+        if self.logger:
+            pass
         if rpm > 0:
             GPIO.output(self.in1, 1)
             GPIO.output(self.in2, 0)
@@ -145,10 +148,11 @@ class Servo:
 
 class LED:
     def __init__(self, pin):
+        self.pin = pin
         GPIO.setup(pin,GPIO.OUT)
 
     def set_state(self, state):
         if state:
-            GPIO.output(18,GPIO.HIGH)
+            GPIO.output(self.pin,GPIO.HIGH)
         else:
-            GPIO.output(18,GPIO.LOW)
+            GPIO.output(self.pin,GPIO.LOW)
