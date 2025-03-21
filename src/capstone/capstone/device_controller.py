@@ -11,7 +11,7 @@ from capstone.motor import Motor, PID, Servo, LED
 import RPi.GPIO as GPIO
 
 
-class MotorController(Node):
+class DeviceController(Node):
     def __init__(self):
         super().__init__('motor_controller')
 
@@ -35,6 +35,7 @@ class MotorController(Node):
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
+        self.get_logger().info(f"{self.MAX_RPM}")
 
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(RobotSpeed, 'robot_speed', self.speed_callback,10)
@@ -115,12 +116,12 @@ def main(args=None):
     rclpy.init(args=args)
     try:
         GPIO.setmode(GPIO.BCM)
-        motor_controller = MotorController()
-        rclpy.spin(motor_controller)
+        device_controller = DeviceController()
+        rclpy.spin(device_controller)
     finally:
-        motor_controller.M_left.shutdown()
-        motor_controller.M_right.shutdown()
-        motor_controller.destroy_node()
+        device_controller.M_left.shutdown()
+        device_controller.M_right.shutdown()
+        device_controller.destroy_node()
         rclpy.shutdown()
         GPIO.cleanup()
 
