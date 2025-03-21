@@ -342,19 +342,19 @@ def main(args=None):
             # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            # while camera.running:
-            #     in_rgb = q_RGB.get()
+            while camera.running:
+                in_rgb = q_RGB.get()
             #     # in_detections = q_detections.get()
             #     # in_pointcloud = q_pointcloud.get()
 
-            #     frame = in_rgb.getCvFrame()
-            #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = in_rgb.getCvFrame()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             #     # detections = in_detections.detections
             #     # for detection in detections:
             #     #     frame = camera.broadcast_defect(detection, frame)
 
-            #     camera.broadcast_frame(frame)
+                camera.broadcast_frame(frame)
 
             #     # points = in_pointcloud.getPoints()
             #     # camera.broadcast_pointcloud_frame(points, frame)
