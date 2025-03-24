@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class Motor:
-    def __init__(self, in1, in2, en, enc_A, enc_B, max_rpm, encoder_ticks=350):
+    def __init__(self, in1, in2, en, enc_A, enc_B, max_rpm, encoder_ticks=350, logger=None):
         self.max_rpm = max_rpm
         self.encoder_ticks = encoder_ticks
         self.in1 = in1
@@ -17,6 +17,7 @@ class Motor:
         self.last_pos = 0
         self.last_event_time = time.time()
         self.speed = 0
+        self.logger = logger
 
         # Pin setup
         GPIO.setup(self.in1, GPIO.OUT)
@@ -44,15 +45,19 @@ class Motor:
 
     def convert_to_duty(self, x):
         if x > self.max_rpm:
-            raise ValueError(f"Needed speed of {x} is higher than max speed of {self.max_rpm}")
+            # raise ValueError(f"Needed speed of {x} is higher than max speed of {self.max_rpm}")
+            x = self.max_rpm
         elif x < 0:
-            raise ValueError(f"Needed speed of {x} is less than 0")
+            # raise ValueError(f"Needed speed of {x} is less than 0")
+            x = 0
 
         return (x * 100) // self.max_rpm
 
     def set_rpm(self, rpm):
         duty = self.convert_to_duty(abs(rpm))
         self.pwm.ChangeDutyCycle(duty)
+        if self.logger:
+            pass
         if rpm > 0:
             GPIO.output(self.in1, 1)
             GPIO.output(self.in2, 0)
@@ -118,17 +123,21 @@ class PID:
 
 
 class Servo:
-    def __init__(self, pin, starting_angle=0):
+    def __init__(self, pin, starting_angle=0, logger=None):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
         GPIO.output(self.pin, 1)
         self.pwm = GPIO.PWM(self.pin, 50)
         self.pwm.start(7)  # Start servo at 90 degrees
         self.angle = starting_angle
+        self.logger = logger
+        self.set_angle(self.angle)
 
     def set_angle(self, angle):
         self.angle = angle
-        duty = angle / 18 + 2
+        duty = angle / 18 + 2.5
+        if self.logger:
+            self.logger.info(f"duty for servo {duty}")
         self.pwm.ChangeDutyCycle(duty)
 
     def reset(self):
@@ -136,3 +145,14 @@ class Servo:
 
     def shutdown(self):
         self.pwm.stop()
+
+class LED:
+    def __init__(self, pin):
+        self.pin = pin
+        GPIO.setup(pin,GPIO.OUT)
+
+    def set_state(self, state):
+        if state:
+            GPIO.output(self.pin,GPIO.HIGH)
+        else:
+            GPIO.output(self.pin,GPIO.LOW)

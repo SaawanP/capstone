@@ -18,6 +18,7 @@ import yaml
 import h5py
 import struct
 import time
+import numpy as np
 
 
 class Brain(Node):
@@ -25,11 +26,11 @@ class Brain(Node):
         super().__init__('brain')
 
         # Constants
-        self.declare_parameter('joy_range', 0)
-        self.declare_parameter('max_speed', 0.0)
+        self.declare_parameter('max_speed', 1.412)
+        self.declare_parameter('max_track_angle', 40)
 
-        self.JOY_RANGE = self.get_parameter('joy_range').get_parameter_value().integer_value
         self.MAX_SPEED = self.get_parameter('max_speed').get_parameter_value().integer_value
+        self.MAX_TRACK_ANGLE = self.get_parameter('max_track_angle').get_parameter_value().integer_value
 
         # Subscribers and publishers
         self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
@@ -51,6 +52,9 @@ class Brain(Node):
         self.running = False
         self.folder = ""
         self.h5_file = None
+        self.lights = False
+        self.light_button_last = 0
+        self.track_angle = 0
 
     def start_running(self, msg):
         self.running = True
@@ -66,17 +70,31 @@ class Brain(Node):
         robot_speed = RobotSpeed()  # TODO fix index
         vx = 0
         vy = 0
-        vx = msg.axes[2] / self.JOY_RANGE
+        vx = msg.axes[2]
         robot_speed.direction = math.copysign(1, vx)
-        vy = msg.axes[3] / self.JOY_RANGE
-        robot_speed.turning_radius = msg.axes[0] / self.JOY_RANGE
-        robot_speed.speed = math.sqrt(vx ** 2 + vy ** 2)
+        vy = msg.axes[3]
+        robot_speed.turning_radius = msg.axes[0]
+        robot_speed.speed = min(math.sqrt(vx ** 2 + vy ** 2), 1)
         self.robot_speed_pub.publish(robot_speed)
+
+        if self.light_button_last != 1 and msg.buttons[0] == 1:
+            self.lights = not self.lights
+            robot_speed.lights = self.lights
+
+        if msg.buttons[1] == 1:
+            self.track_angle += 0.1
+            self.track_angle = min(self.track_angle, self.MAX_TRACK_ANGLE)
+        
+        if msg.buttons[2] == 1:
+            self.track_angle -= 0.1
+            self.track_angle = max(self.track_angle, 0)
+        
+        robot_speed.track_angle = self.track_angle
 
         camera_speed = CameraSpeed()  # TODO fix index
         camera_speed.reset = False
-        camera_speed.wx = msg.axes[0] / self.JOY_RANGE
-        camera_speed.wy = msg.axes[1] / self.JOY_RANGE
+        camera_speed.wx = msg.axes[0]
+        camera_speed.wy = msg.axes[1]
         self.camera_speed_pub.publish(camera_speed)
 
     def pointcloud_callback(self, msg: PointCloud2):
@@ -127,7 +145,7 @@ class Brain(Node):
             defects[location] = image_location
 
         # Save yaml
-        yaml_location = folder + "/defects.yaml"
+        yaml_location = self.folder + "/defects.yaml"
         with open(yaml_location, 'w') as f:
             yaml.dump(defects, f)
 

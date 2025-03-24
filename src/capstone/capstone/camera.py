@@ -28,12 +28,12 @@ class Camera(Node):
         super().__init__('camera')
 
         # Constants
-        self.declare_parameter('max_camera_speed', 0)
-        self.declare_parameter('max_camera_range', 30)
+        self.declare_parameter('max_camera_speed', 0.5)
+        self.declare_parameter('max_camera_range', 20)
         self.declare_parameter('starting_camera_angle', 90)
-        self.declare_parameter('fps', 0)
+        self.declare_parameter('fps', 30)
 
-        self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().integer_value
+        self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().double_value
         self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value
         self.START_CAMERA_ANGLE = self.get_parameter('starting_camera_angle').get_parameter_value().integer_value
         FPS = self.get_parameter('fps').get_parameter_value().integer_value
@@ -43,8 +43,8 @@ class Camera(Node):
         self.seen_defects = []
 
         # Servo setup
-        self.servo_x = Servo(10, self.START_CAMERA_ANGLE)  # TODO change pin
-        self.servo_y = Servo(11, self.START_CAMERA_ANGLE)
+        self.servo_x = Servo(17, self.START_CAMERA_ANGLE)
+        self.servo_y = Servo(27, self.START_CAMERA_ANGLE)
         self.last_servo_move = self.get_clock().now()
         self.camera_position = [0, 0]
         self.transformation = Transformation()
@@ -63,6 +63,8 @@ class Camera(Node):
 
         # Camera Pipeline Setup
         self.pipeline = dai.Pipeline()
+
+        """
         camRGB = self.pipeline.create(dai.node.ColorCamera)
         mono_left = self.pipeline.create(dai.node.MonoCamera)
         mono_right = self.pipeline.create(dai.node.MonoCamera)
@@ -127,7 +129,7 @@ class Camera(Node):
         rgb_xout.setStreamName("rgb")
         nn_xout.setStreamName("detections")
         pcl_xout.setStreamName("pcl")
-
+        """
         """
         Linking Diagram:
 
@@ -139,6 +141,17 @@ class Camera(Node):
         mono_right--|
 
         """
+
+        # Dummy Pipeline
+        # Define the color camera
+        cam_rgb = self.pipeline.create(dai.node.ColorCamera)
+        cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+        cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+
+        # Create output stream
+        xout_rgb = self.pipeline.create(dai.node.XLinkOut)  # Fixed typo: XaLinkOut -> XLinkOut
+        xout_rgb.setStreamName("rgb")
+        cam_rgb.video.link(xout_rgb.input)
 
     def start_runnning(self, msg):
         self.running = True
@@ -324,28 +337,29 @@ def main(args=None):
         GPIO.setmode(GPIO.BCM)
         camera = Camera()
         with dai.Device(camera.pipeline) as device:
-            q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+            camera.get_logger().info("Device connected")
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-            q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
+            # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+            # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            while camera.running:
-                in_detections = q_detections.get()
+            while True:
                 in_rgb = q_RGB.get()
-                in_pointcloud = q_pointcloud.get()
+            #     # in_detections = q_detections.get()
+            #     # in_pointcloud = q_pointcloud.get()
 
                 frame = in_rgb.getCvFrame()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                detections = in_detections.detections
-                for detection in detections:
-                    frame = camera.broadcast_defect(detection, frame)
+            #     # detections = in_detections.detections
+            #     # for detection in detections:
+            #     #     frame = camera.broadcast_defect(detection, frame)
 
                 camera.broadcast_frame(frame)
 
-                points = in_pointcloud.getPoints()
-                camera.broadcast_pointcloud_frame(points, frame)
+            #     # points = in_pointcloud.getPoints()
+            #     # camera.broadcast_pointcloud_frame(points, frame)
 
-                rclpy.spin_once(camera)
+            #     rclpy.spin_once(camera)
     finally:
         camera.destroy_node()
         rclpy.shutdown()
