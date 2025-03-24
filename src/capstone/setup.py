@@ -50,7 +50,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'backend=capstone.backend:main',
             'brain=capstone.brain:main',
             'camera=capstone.camera:main',
             'device_controller=capstone.device_controller:main',

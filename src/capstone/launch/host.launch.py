@@ -22,12 +22,6 @@ def generate_launch_description():
         executable="brain",
         parameters=[host_config]
     )
-
-    backend_node = Node(
-        package="capstone",
-        executable="backend",
-        parameters=[host_config]
-    )
     
     # Define the joystick node
     joy_node = Node(
@@ -47,7 +41,6 @@ def generate_launch_description():
     
     # Create and return launch description
     ld = LaunchDescription()
-    ld.add_action(backend_node)
     ld.add_action(joy_node)
     ld.add_action(app_process)
     ld.add_action(brain_node)

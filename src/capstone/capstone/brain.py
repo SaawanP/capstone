@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from cv_bridge import CvBridge
+# from cv_bridge import CvBridge
 from sensor_msgs_py import point_cloud2 as pc2
 
 from sensor_msgs.msg import Joy
@@ -12,10 +12,10 @@ from geometry_msgs.msg import Vector3
 from std_msgs.msg import Header
 
 import math
-import open3d as o3d
-import cv2
+# import open3d as o3d
+# import cv2
 import yaml
-import h5py
+# import h5py
 import struct
 import time
 import numpy as np
@@ -42,7 +42,7 @@ class Brain(Node):
         self.robot_speed_pub = self.create_publisher(RobotSpeed, 'robot_speed', 10)
         self.camera_speed_pub = self.create_publisher(CameraSpeed, 'camera_speed', 10)
 
-        self.bridge = CvBridge()
+        # self.bridge = CvBridge()
         self.defect_locations: list[Defect] = []
         self.curr_position: Vector3 = Vector3()
         self.last_velocity: Vector3 = Vector3()
@@ -54,42 +54,42 @@ class Brain(Node):
         self.h5_file = None
         self.lights = False
         self.light_button_last = 0
-        self.track_angle = 0
+        self.track_angle = 0.0
 
     def start_running(self, msg):
         self.running = True
-        self.folder = msg.save_location + "/" + msg.report_name
-        h5_filename = self.folder + 'data_points.h5'
-        self.h5_file = h5py.File(h5_filename, 'a')
+        # self.folder = msg.save_location + "/" + msg.report_name
+        # h5_filename = self.folder + 'data_points.h5'
+        # self.h5_file = h5py.File(h5_filename, 'a')
 
     def joy_callback(self, msg: Joy):
-        if not self.running:
-            return
+        # if not self.running:
+        #     return
 
         # All values are -1 to 1
-        robot_speed = RobotSpeed()  # TODO fix index
-        vx = 0
-        vy = 0
-        vx = msg.axes[2]
+        robot_speed = RobotSpeed()
+        robot_speed.header.stamp = msg.header.stamp
+        vx = msg.axes[3]
+        vy = msg.axes[2]
         robot_speed.direction = math.copysign(1, vx)
-        vy = msg.axes[3]
-        robot_speed.turning_radius = msg.axes[0]
-        robot_speed.speed = min(math.sqrt(vx ** 2 + vy ** 2), 1)
-        self.robot_speed_pub.publish(robot_speed)
+        robot_speed.turning_radius = vx
+        robot_speed.speed = min(math.sqrt(vx ** 2 + vy ** 2), 1.0)
 
         if self.light_button_last != 1 and msg.buttons[0] == 1:
             self.lights = not self.lights
-            robot_speed.lights = self.lights
+        robot_speed.lights = self.lights
+        self.light_button_last = msg.buttons[0]
 
         if msg.buttons[1] == 1:
-            self.track_angle += 0.1
+            self.track_angle += 5
             self.track_angle = min(self.track_angle, self.MAX_TRACK_ANGLE)
         
         if msg.buttons[2] == 1:
-            self.track_angle -= 0.1
+            self.track_angle -= 5
             self.track_angle = max(self.track_angle, 0)
         
-        robot_speed.track_angle = self.track_angle
+        robot_speed.track_angle = float(self.track_angle)
+        self.robot_speed_pub.publish(robot_speed)
 
         camera_speed = CameraSpeed()  # TODO fix index
         camera_speed.reset = False
@@ -101,23 +101,23 @@ class Brain(Node):
         if not self.running:
             return
 
-        colored_points = np.array(pc2.read_points(msg, skip_nans=True))
-        points = np.zeros(shape=(len(colored_points), 3))
-        colors = np.zeros(shape=(len(colored_points), 3))
-        for i, colored_point in enumerate(colored_points):
-            points[i] = colored_point[0: 3]
-            b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
-            colors[i] = [r, g, b]
+        # colored_points = np.array(pc2.read_points(msg, skip_nans=True))
+        # points = np.zeros(shape=(len(colored_points), 3))
+        # colors = np.zeros(shape=(len(colored_points), 3))
+        # for i, colored_point in enumerate(colored_points):
+        #     points[i] = colored_point[0: 3]
+        #     b, g, r, a = struct.unpack('BBBB', colored_point[3].to_bytes(4, byteorder='little'))
+        #     colors[i] = [r, g, b]
 
-        try:
-            frame_id = f"frame_{self.current_timestep}"
-            grp = self.h5_file.create_group(frame_id)
-            grp.create_dataset("points", data=points)
-            grp.create_dataset("colors", data=colors)
-            grp.attrs["timestamp"] = time.time()
-            self.h5_file.flush()
-        except Exception as e:
-            self.get_logger().error(f"Error saving to H5 file: {e}")
+        # try:
+        #     frame_id = f"frame_{self.current_timestep}"
+        #     grp = self.h5_file.create_group(frame_id)
+        #     grp.create_dataset("points", data=points)
+        #     grp.create_dataset("colors", data=colors)
+        #     grp.attrs["timestamp"] = time.time()
+        #     self.h5_file.flush()
+        # except Exception as e:
+        #     self.get_logger().error(f"Error saving to H5 file: {e}")
 
     def defect_location_callback(self, msg):
         if not self.running:
@@ -129,25 +129,26 @@ class Brain(Node):
         self.defect_locations.append(msg)
 
     def save_report_to_file(self, msg):
-        # Save pointcloud data
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(self.point_cloud)
-        pcd_location = self.folder + "/point_cloud." + msg.point_cloud_save_type
-        o3d.io.write_point_cloud(pcd_location, pcd)
+        return
+        # # Save pointcloud data
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(self.point_cloud)
+        # pcd_location = self.folder + "/point_cloud." + msg.point_cloud_save_type
+        # o3d.io.write_point_cloud(pcd_location, pcd)
 
-        # Save defect images
-        defects = {}
-        for i, d in enumerate(self.defect_locations):
-            location = (d.location.x, d.location.y, d.location.z)
-            image_location = self.folder + f"/crack_{i}.png"
-            cv_image = self.bridge.imgmsg_to_cv2(d.image)
-            cv2.imwrite(image_location, cv_image)
-            defects[location] = image_location
+        # # Save defect images
+        # defects = {}
+        # for i, d in enumerate(self.defect_locations):
+        #     location = (d.location.x, d.location.y, d.location.z)
+        #     image_location = self.folder + f"/crack_{i}.png"
+        #     cv_image = self.bridge.imgmsg_to_cv2(d.image)
+        #     cv2.imwrite(image_location, cv_image)
+        #     defects[location] = image_location
 
-        # Save yaml
-        yaml_location = self.folder + "/defects.yaml"
-        with open(yaml_location, 'w') as f:
-            yaml.dump(defects, f)
+        # # Save yaml
+        # yaml_location = self.folder + "/defects.yaml"
+        # with open(yaml_location, 'w') as f:
+        #     yaml.dump(defects, f)
 
 
 def main(args=None):
