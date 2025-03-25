@@ -105,7 +105,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.frame_2)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_2.addItem(self.verticalSpacer)
 
@@ -220,6 +220,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QHBoxLayout(self.frame_5)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.startStopBtn = QPushButton(self.frame_5)
+        self.startStopBtn.setObjectName(u"startStopBtn")
+
+        self.horizontalLayout_7.addWidget(self.startStopBtn)
+
 
         self.horizontalLayout_5.addWidget(self.frame_5)
 
@@ -289,15 +294,15 @@ class Ui_MainWindow(object):
         self.home_page.setObjectName(u"home_page")
         self.horizontalLayout_3 = QHBoxLayout(self.home_page)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.video_label = QLabel(self.home_page)
-        self.video_label.setObjectName(u"video_label")
+        self.cameraFeed = QLabel(self.home_page)
+        self.cameraFeed.setObjectName(u"cameraFeed")
 
-        self.horizontalLayout_3.addWidget(self.video_label)
+        self.horizontalLayout_3.addWidget(self.cameraFeed)
 
-        self.picture_label = QLabel(self.home_page)
-        self.picture_label.setObjectName(u"picture_label")
+        self.capturedDefects = QLabel(self.home_page)
+        self.capturedDefects.setObjectName(u"capturedDefects")
 
-        self.horizontalLayout_3.addWidget(self.picture_label)
+        self.horizontalLayout_3.addWidget(self.capturedDefects)
 
         self.mainPages.addWidget(self.home_page)
         self.gantt = QWidget()
@@ -382,7 +387,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6.addWidget(self.frame_17)
 
-        self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_6.addItem(self.verticalSpacer_5)
 
@@ -470,7 +475,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_6.addWidget(self.rightMenuPages)
 
-        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_6.addItem(self.verticalSpacer_4)
 
@@ -595,6 +600,7 @@ class Ui_MainWindow(object):
         self.profileMenuBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Profile", None))
 #endif // QT_CONFIG(tooltip)
         self.profileMenuBtn.setText("")
+        self.startStopBtn.setText(QCoreApplication.translate("MainWindow", u"Start", None))
 #if QT_CONFIG(tooltip)
         self.minimizeBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Minimize Window", None))
 #endif // QT_CONFIG(tooltip)
@@ -607,8 +613,8 @@ class Ui_MainWindow(object):
         self.closeBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Close Window", None))
 #endif // QT_CONFIG(tooltip)
         self.closeBtn.setText("")
-        self.video_label.setText(QCoreApplication.translate("MainWindow", u"Live", None))
-        self.picture_label.setText(QCoreApplication.translate("MainWindow", u"Captured", None))
+        self.cameraFeed.setText(QCoreApplication.translate("MainWindow", u"Live", None))
+        self.capturedDefects.setText(QCoreApplication.translate("MainWindow", u"Captured", None))
         self.label_9.setText(QCoreApplication.translate("MainWindow", u"Charts", None))
         self.label_13.setText(QCoreApplication.translate("MainWindow", u"Data Analysis", None))
         self.label_16.setText(QCoreApplication.translate("MainWindow", u"Reports", None))
