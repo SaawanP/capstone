@@ -33,7 +33,7 @@ class Backend(Node):
         self.signals = CameraSignals()
 
     def stream_image(self, msg):
-        cv_image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
+        cv_image = self.bridge.imgmsg_to_cv2(msg)
         self.signals.image_ready.emit(cv_image)
 
     def defect_callback(self, msg):

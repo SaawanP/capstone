@@ -146,6 +146,7 @@ class Camera(Node):
 
     def broadcast_frame(self, frame):
         ros_image = self.bridge.cv2_to_imgmsg(frame)
+        ros_image.header.stamp = self.get_clock().now().to_msg()
         self.rgb_pub.publish(ros_image)
 
     def broadcast_defect(self, detection, frame):
@@ -295,27 +296,26 @@ def main(args=None):
             # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
             # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
 
-            while not camera.running:
-                camera.get_logger().info("Waiting to start camera", throttle_duration_sec=1)
+            # while not camera.running:
+            #     camera.get_logger().info("Waiting to start camera", throttle_duration_sec=1)
 
-            while camera.running:
+            while rclpy.ok():
                 in_rgb = q_RGB.get()
-            #     # in_detections = q_detections.get()
-            #     # in_pointcloud = q_pointcloud.get()
+                # in_detections = q_detections.get()
+                # in_pointcloud = q_pointcloud.get()
 
                 frame = in_rgb.getCvFrame()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            #     # detections = in_detections.detections
-            #     # for detection in detections:
-            #     #     frame = camera.broadcast_defect(detection, frame)
+                # detections = in_detections.detections
+                # for detection in detections:
+                #     frame = camera.broadcast_defect(detection, frame)
 
                 camera.broadcast_frame(frame)
 
-            #     # points = in_pointcloud.getPoints()
-            #     # camera.broadcast_pointcloud_frame(points, frame)
-
-                rclpy.spin_once(camera)
+                # points = in_pointcloud.getPoints()
+                # camera.broadcast_pointcloud_frame(points, frame)
+                rclpy.spin_once(camera, timeout_sec=0.1)
     finally:
         camera.destroy_node()
         rclpy.shutdown()

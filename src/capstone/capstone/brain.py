@@ -155,8 +155,6 @@ def main(args=None):
     rclpy.init(args=args)
     brain = Brain()
     try:
-        while not brain.running:
-            brain.get_logger().info("Waiting to start brain", throttle_duration_sec=1)
         rclpy.spin(brain)
     finally:
         brain.destroy_node()
