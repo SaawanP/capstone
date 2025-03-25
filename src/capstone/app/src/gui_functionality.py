@@ -2,14 +2,15 @@ from Custom_Widgets import *
 from Custom_Widgets.QAppSettings import QAppSettings
 from Custom_Widgets.QCustomTipOverlay import QCustomTipOverlay
 from Custom_Widgets.QCustomLoadingIndicators import QCustom3CirclesLoader
-from PySide6.QtCore import QSettings, QTimer, Signal
+from PySide6.QtCore import QSettings, QTimer, Signal, QObject
 from PySide6.QtGui import QColor, QFont, QFontDatabase
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
-class GuiFunctions:
+class GuiFunctions(QObject):
     startSignal = Signal(dict)
 
     def __init__(self, MainWindow):
+        super().__init__()
         self.main = MainWindow # Store the mainwindow instance
         self.ui = MainWindow.ui # Store the ui instance
         self.running = False
