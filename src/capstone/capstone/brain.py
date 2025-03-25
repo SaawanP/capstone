@@ -62,8 +62,8 @@ class Brain(Node):
         # self.h5_file = h5py.File(h5_filename, 'a')
 
     def joy_callback(self, msg: Joy):
-        # if not self.running:
-        #     return
+        if not self.running:
+            return
 
         # All values are -1 to 1
         robot_speed = RobotSpeed()
@@ -155,6 +155,8 @@ def main(args=None):
     rclpy.init(args=args)
     brain = Brain()
     try:
+        while not brain.running:
+            brain.get_logger().info("Waiting to start brain", throttle_duration_sec=1)
         rclpy.spin(brain)
     finally:
         brain.destroy_node()
