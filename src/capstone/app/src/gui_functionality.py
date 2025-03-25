@@ -2,14 +2,17 @@ from Custom_Widgets import *
 from Custom_Widgets.QAppSettings import QAppSettings
 from Custom_Widgets.QCustomTipOverlay import QCustomTipOverlay
 from Custom_Widgets.QCustomLoadingIndicators import QCustom3CirclesLoader
-from PySide6.QtCore import QSettings, QTimer
+from PySide6.QtCore import QSettings, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontDatabase
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
-class GuiFunctions():
+class GuiFunctions:
+    startSignal = Signal(dict)
+
     def __init__(self, MainWindow):
         self.main = MainWindow # Store the mainwindow instance
         self.ui = MainWindow.ui # Store the ui instance
+        self.running = False
 
         self.loadProductSansFont()
         # init app theme
@@ -21,25 +24,27 @@ class GuiFunctions():
     def connectMenuButtons (self):
         """Connect buttons to expand/collapse menu widgets."""
         # Expand right menu widget
-        self.ui.settingsBtn.clicked.connect(lambda: self.ui.rightMenuContainer.expandMenu())
-        self.ui.infoBtn.clicked.connect(lambda: self.ui.rightMenuContainer.expandMenu())
-        self.ui.helpBtn.clicked.connect(lambda: self.ui.rightMenuContainer.expandMenu())
-        self.ui.notificationBtn.clicked.connect(lambda: self.ui.rightMenuContainer.expandMenu())
-        self.ui.moreMenuBtn.clicked.connect(lambda: self.ui.rightMenuContainer.expandMenu())
-        self.ui.profileMenuBtn.clicked. connect (lambda: self.ui.rightMenuContainer.expandMenu())
+        self.ui.settingsBtn.clicked.connect(self.ui.rightMenuContainer.expandMenu)
+        self.ui.infoBtn.clicked.connect(self.ui.rightMenuContainer.expandMenu)
+        self.ui.helpBtn.clicked.connect(self.ui.rightMenuContainer.expandMenu)
+        self.ui.notificationBtn.clicked.connect(self.ui.rightMenuContainer.expandMenu)
+        self.ui.moreMenuBtn.clicked.connect(self.ui.rightMenuContainer.expandMenu)
+        self.ui.profileMenuBtn.clicked. connect (self.ui.rightMenuContainer.expandMenu)
         # Close right menu widget
-        self.ui.closeRightMenuBtn.clicked.connect(lambda: self.ui.rightMenuContainer.collapseMenu())
+        self.ui.closeRightMenuBtn.clicked.connect(self.ui.rightMenuContainer.collapseMenu)
+
+        self.ui.startStopBtn.clicked.connect(self.sendMessage)
 
     
     # initialize app them
     def initializeAppTheme (self):
         """Initialize the application theme from settings"""
-        settings = QSettings ()
+        settings = QSettings()
         current_theme = settings.value("THEME")
         # print("Current theme is: ", current_theme)
 
         # Add theme to the theme list
-        self.populateThemeList (current_theme)
+        self.populateThemeList(current_theme)
         self.ui.themeList.currentTextChanged.connect(self.changeAppTheme)
     
     def changeAppTheme (self):
@@ -70,10 +75,19 @@ class GuiFunctions():
         # Apply font
         font_family = QFontDatabase. applicationFontFamilies (font_id)
         if font_family:
-            product_sans = QFont (font_family[0])
+            product_sans = QFont(font_family[0])
         else:
             product_sans = QFont("Sans Serif")
         # apply to main window
-        self.main.setFont(product_sans)               
+        self.main.setFont(product_sans)
+
+    def sendMessage(self):
+        message = {}
+        self.running = not self.running
+        message["status"] = self.running
+        message["save_location"] = "~/capstone"
+        message["report_name"] = "test"
+        message["point_cloud_save_type"] = "pcd"
+        self.startSignal.emit(message)
 
     

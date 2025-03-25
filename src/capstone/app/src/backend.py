@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import cv2
 import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
@@ -8,7 +8,13 @@ from robot_interface.msg import Defect, Save
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header
 
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PySide6.QtCore import QObject, Signal, Slot
+import numpy as np
+
+
+class CameraSignals(QObject):
+    image_ready = Signal(np.ndarray)
+    defect_detect = Signal(np.ndarray)
 
 
 class Backend(Node):
@@ -16,7 +22,6 @@ class Backend(Node):
         super().__init__('backend')
 
         self.bridge = CvBridge()
-        self.qt_image = QtGui.QImage()
 
         # Subscribers and publishers
         self.rgb_sub = self.create_subscription(Image, 'image_stream', self.stream_image, 10)
@@ -25,23 +30,37 @@ class Backend(Node):
         self.save_pub = self.create_publisher(Save, 'save_report', 10)
         self.start_pub = self.create_publisher(Save, 'start_report', 10)
 
+        self.signals = CameraSignals()
+
     def stream_image(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
-        self.qt_image = QtGui.QImage(self.image.data, self.image.shape[1], self.image.shape[0], QtGui.QImage.Format_RGB888)
+        self.signals.image_ready.emit(cv_image)
 
     def defect_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg.image)
         location = [msg.location.x, msg.location.y, msg.location.z]
+        text = "Location: " + str(location)
+        position = (50, 50)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        color = (255, 255, 255)
+        thickness = 2
+        line_type = cv2.LINE_AA
+        cv2.putText(cv_image, text, position, font, font_scale, color, thickness, line_type)
 
-    def start_report(self):
-        self.start_pub.publish(Header())
+        self.signals.defect_detect.emit(cv_image)
 
-    def save_report(self):
+    @Slot(dict)
+    def send_report_details(self, message):
+        self.get_logger().info("got start/stop")
         msg = Save()
-        msg.save_location = "change later"
-        msg.report_name = "change later"
-        msg.point_cloud_save_type = "change later"
-        self.save_pub.publish(msg)
+        msg.save_location = message["save_location"]
+        msg.report_name = message["report_name"]
+        msg.point_cloud_save_type = message["point_cloud_save_type"]
+        if message["status"]:
+            self.start_pub.publish(msg)
+        else:
+            self.save_pub.publish(msg)
 
 
 def main(args=None):

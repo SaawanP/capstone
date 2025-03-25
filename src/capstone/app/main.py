@@ -20,6 +20,8 @@ from Custom_Widgets import *
 from Custom_Widgets.QAppSettings import QAppSettings
 import _icons_rc
 
+from src.backend import Backend
+
 # # Signal class to communicate between ROS2 thread and Qt GUI
 # class CameraSignals(QObject):
 #     image_ready = Signal(np.ndarray)
@@ -75,32 +77,36 @@ class MainWindow(QMainWindow):
     #     if hasattr(self, 'camera_subscriber') and self.camera_subscriber is not None:
     #         self.camera_subscriber.signals.image_ready.connect(self.update_camera_feed)
     
-    # @Slot(np.ndarray)
-    # def update_camera_feed(self, cv_image):
-    #     if hasattr(self.ui, 'cameraFeed'):
-    #         # Convert CV image to Qt format
-    #         height, width, channel = cv_image.shape
-    #         bytes_per_line = 3 * width
-    #         q_image = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
-    #         pixmap = QPixmap.fromImage(q_image)
+    @Slot(np.ndarray)
+    def update_camera_feed(self, frame_image):
+        if hasattr(self.ui, 'cameraFeed'):
+            # Convert CV image to Qt format
+            height, width, channel = frame_image.shape
+            bytes_per_line = 3 * width
+            q_image = QImage(frame_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(q_image)
             
-    #         # Update the QLabel
-    #         self.ui.cameraFeed.setPixmap(pixmap)
-    #         self.ui.cameraFeed.setScaledContents(True)
-    
+            # Update the QLabel
+            self.ui.cameraFeed.setPixmap(pixmap)
+            self.ui.cameraFeed.setScaledContents(True)
 
-def ros_thread_function(args=None):
-    rclpy.init(args=args)
-    # camera_subscriber = CameraSubscriber()
-    
-    # # Store the camera subscriber in the global variable
-    # # so it can be accessed from the main thread
-    # global ros_camera_subscriber
-    # ros_camera_subscriber = camera_subscriber
-    
+    @Slot(np.ndarray)
+    def update_defects(self, defect_image):
+        if hasattr(self.ui, 'capturedDefects'):
+            # Convert CV image to Qt format
+            height, width, channel = defect_image.shape
+            bytes_per_line = 3 * width
+            q_image = QImage(defect_image.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            pixmap = QPixmap.fromImage(q_image)
+
+            # Update the QLabel
+            self.ui.capturedDefects.setPixmap(pixmap)
+            self.ui.capturedDefects.setScaledContents(True)
+
+def ros_thread_function(backend_node):
     # Spin the node in a separate thread
     executor = MultiThreadedExecutor()
-    # executor.add_node(camera_subscriber)
+    executor.add_node(backend_node)
     
     try:
         executor.spin()
@@ -113,24 +119,24 @@ def ros_thread_function(args=None):
 
 def main(args=None):
     # Start ROS2 in a separate thread
-    ros_thread = threading.Thread(target=ros_thread_function, args=(args,))
+    rclpy.init(args=args)
+    backend_node = Backend()
+    ros_thread = threading.Thread(target=ros_thread_function, args=(backend_node,))
     ros_thread.daemon = True  # Allow the thread to exit when the main process exits
     ros_thread.start()
     
     # Start the Qt application
     app = QApplication(sys.argv)
-    
+    window = MainWindow()
+
     # Wait a bit for ROS2 to initialize
     import time
     time.sleep(1)
     
-    # Create and show the main window
-    window = MainWindow()
-    
-    # Connect the camera subscriber to the main window
-    # if 'ros_camera_subscriber' in globals():
-    #     window.camera_subscriber = ros_camera_subscriber
-    #     window.setup_camera_connection()
+    # Connect signals between window and node
+    backend_node.signals.image_ready.connect(window.update_camera_feed)
+    backend_node.signals.defect_detect.connect(window.update_defects)
+    window.app_functions.startSignal.connect(backend_node.send_report_details)
     
     # Run the application
     return_code = app.exec()
