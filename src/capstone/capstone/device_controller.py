@@ -7,7 +7,7 @@ from robot_interface.msg import RobotSpeed
 from geometry_msgs.msg import Vector3
 
 import math
-from capstone.motor import Motor, PID, Servo, LED
+from capstone.devices import Motor, PID, Servo, LED
 import RPi.GPIO as GPIO
 
 
@@ -90,12 +90,11 @@ class DeviceController(Node):
 
         self.M_left.set_rpm(self.left_rpm)
         self.M_right.set_rpm(self.right_rpm)
-        self.led.set_state(msg.lights)
+        self.led.set_level(msg.lights)
         self.servo_track.set_angle(msg.track_angle)
         self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
         self.get_logger().info(f"lights state {msg.lights}")
         self.get_logger().info(f"track angle {msg.track_angle}")
-
 
     def PID_controller(self):
         self.PID_left.set_target_rpm(self.left_rpm)

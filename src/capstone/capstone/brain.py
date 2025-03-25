@@ -52,9 +52,8 @@ class Brain(Node):
         self.running = False
         self.folder = ""
         self.h5_file = None
-        self.lights = False
-        self.light_button_last = 0
         self.track_angle = 0.0
+        self.light_level = 0
 
     def start_running(self, msg):
         self.running = True
@@ -75,20 +74,22 @@ class Brain(Node):
         robot_speed.turning_radius = vx
         robot_speed.speed = min(math.sqrt(vx ** 2 + vy ** 2), 1.0)
 
-        if self.light_button_last != 1 and msg.buttons[0] == 1:
-            self.lights = not self.lights
-        robot_speed.lights = self.lights
-        self.light_button_last = msg.buttons[0]
+        if msg.buttons[0] == 1:
+            self.light_level += 5
+            self.light_level = min(self.light_level, 100)
+        if msg.buttons[3] == 1:
+            self.light_level -= 5
+            self.light_level = max(self.light_level, 0)
+        robot_speed.lights = self.light_level
 
         if msg.buttons[1] == 1:
             self.track_angle += 5
             self.track_angle = min(self.track_angle, self.MAX_TRACK_ANGLE)
-        
         if msg.buttons[2] == 1:
             self.track_angle -= 5
             self.track_angle = max(self.track_angle, 0)
-        
         robot_speed.track_angle = float(self.track_angle)
+
         self.robot_speed_pub.publish(robot_speed)
 
         camera_speed = CameraSpeed()  # TODO fix index

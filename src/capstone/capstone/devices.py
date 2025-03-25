@@ -126,7 +126,6 @@ class Servo:
     def __init__(self, pin, starting_angle=0, logger=None):
         self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
-        GPIO.output(self.pin, 1)
         self.pwm = GPIO.PWM(self.pin, 50)
         self.pwm.start(7)  # Start servo at 90 degrees
         self.angle = starting_angle
@@ -150,9 +149,14 @@ class LED:
     def __init__(self, pin):
         self.pin = pin
         GPIO.setup(pin,GPIO.OUT)
+        self.pwm = GPIO.PWM(self.pin, 50)
+        self.pwm.start(0)
 
     def set_state(self, state):
         if state:
-            GPIO.output(self.pin,GPIO.HIGH)
+            self.pwm.ChangeDutyCycle(100)
         else:
-            GPIO.output(self.pin,GPIO.LOW)
+            self.pwm.ChangeDutyCycle(0)
+
+    def set_level(self, level):
+        self.pwm.ChangeDutyCycle(level)

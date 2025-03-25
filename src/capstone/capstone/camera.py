@@ -19,7 +19,7 @@ import numpy as np
 import struct
 
 from capstone.transformation_matrix import Transformation
-from capstone.motor import Servo
+from capstone.devices import Servo
 import RPi.GPIO as GPIO
 
 
