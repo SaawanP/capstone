@@ -92,8 +92,7 @@ class Brain(Node):
 
         self.robot_speed_pub.publish(robot_speed)
 
-        camera_speed = CameraSpeed()  # TODO fix index
-        camera_speed.reset = False
+        camera_speed = CameraSpeed()
         camera_speed.wx = msg.axes[0]
         camera_speed.wy = msg.axes[1]
         self.camera_speed_pub.publish(camera_speed)

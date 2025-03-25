@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 
-from robot_interface.msg import RobotSpeed
+from robot_interface.msg import RobotSpeed, CameraSpeed
 from geometry_msgs.msg import Vector3
 
 import math
@@ -16,6 +16,9 @@ class DeviceController(Node):
         super().__init__('device_controller')
 
         # Constants
+        self.declare_parameter('max_camera_speed', 0.5)
+        self.declare_parameter('max_camera_range', 20)
+        self.declare_parameter('starting_camera_angle', 90)
         self.declare_parameter('max_rpm', 10)
         self.declare_parameter('radius', 0.02247)
         self.declare_parameter('length', 0.149)
@@ -26,6 +29,9 @@ class DeviceController(Node):
         self.declare_parameter('Kd', 1.0)
 
         # TODO move parameters to ROS param
+        self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().double_value
+        self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value
+        self.START_CAMERA_ANGLE = self.get_parameter('starting_camera_angle').get_parameter_value().integer_value
         self.MAX_RPM = self.get_parameter('max_rpm').get_parameter_value().integer_value
         self.WHEEL_RADIUS = self.get_parameter('radius').get_parameter_value().double_value
         self.LENGTH = self.get_parameter('length').get_parameter_value().double_value
@@ -37,7 +43,8 @@ class DeviceController(Node):
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
 
         # Subscribers and publishers
-        self.speed_sub = self.create_subscription(RobotSpeed, 'robot_speed', self.speed_callback,10)
+        self.robot_speed_sub = self.create_subscription(RobotSpeed, 'robot_speed', self.robot_speed_callback, 10)
+        self.camera_speed_sub = self.create_subscription(CameraSpeed, 'camera_speed', self.camera_speed_callback, 10)
 
         self.position_pub = self.create_publisher(Vector3, 'position', 10)
 
@@ -60,11 +67,37 @@ class DeviceController(Node):
         # Track servo
         self.servo_track = Servo(22)
 
+        # Camera setup
+        self.servo_x = Servo(17, self.START_CAMERA_ANGLE, logger=self.get_logger())
+        self.servo_y = Servo(27, self.START_CAMERA_ANGLE, logger=self.get_logger())
+        self.last_servo_move = self.get_clock().now()
+
         # Led
         self.led = LED(25)
 
+    def camera_speed_callback(self, msg):
+        now = self.get_clock().now()
+        dt = now - self.last_servo_move
+        self.last_servo_move = now
 
-    def speed_callback(self, msg):
+        x_speed = self.MAX_CAMERA_SPEED * msg.wx
+        y_speed = self.MAX_CAMERA_SPEED * msg.wy
+
+        dx = x_speed * dt
+        dy = y_speed * dt
+
+        x = self.servo_x.angle + dx
+        y = self.servo_y.angle + dy
+
+        if abs(x) > self.MAX_CAMERA_RANGE:
+            x = math.copysign(self.MAX_CAMERA_RANGE, x)
+        if abs(y) > self.MAX_CAMERA_RANGE:
+            y = math.copysign(self.MAX_CAMERA_RANGE, y)
+
+        self.servo_x.set_angle(self.START_CAMERA_ANGLE + x)
+        self.servo_y.set_angle(self.START_CAMERA_ANGLE + y)
+
+    def robot_speed_callback(self, msg):
         # speed = msg.speed * self.MAX_SPEED
 
         # if msg.turning_radius == 0:

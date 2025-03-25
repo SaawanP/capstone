@@ -5,11 +5,10 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs_py import point_cloud2 as pc2
 
-from robot_interface.msg import CameraSpeed, Defect, Save
-from sensor_msgs.msg import Image, Imu, PointCloud2, PointField
+from robot_interface.msg import Defect, Save
+from sensor_msgs.msg import Image, PointCloud2, PointField
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import Header
-from geometry_msgs.msg import Vector3
 
 import depthai as dai
 import cv2
@@ -19,8 +18,6 @@ import numpy as np
 import struct
 
 from capstone.transformation_matrix import Transformation
-from capstone.devices import Servo
-import RPi.GPIO as GPIO
 
 
 class Camera(Node):
@@ -28,30 +25,17 @@ class Camera(Node):
         super().__init__('camera')
 
         # Constants
-        self.declare_parameter('max_camera_speed', 0.5)
-        self.declare_parameter('max_camera_range', 20)
-        self.declare_parameter('starting_camera_angle', 90)
         self.declare_parameter('fps', 30)
 
-        self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().double_value
-        self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value
-        self.START_CAMERA_ANGLE = self.get_parameter('starting_camera_angle').get_parameter_value().integer_value
         FPS = self.get_parameter('fps').get_parameter_value().integer_value
 
         self.bridge = CvBridge()
         self.start_time = None
         self.seen_defects = []
-
-        # Servo setup
-        self.servo_x = Servo(17, self.START_CAMERA_ANGLE, logger=self.get_logger())
-        self.servo_y = Servo(27, self.START_CAMERA_ANGLE, logger=self.get_logger())
-        self.last_servo_move = self.get_clock().now()
-        self.camera_position = [0, 0]
         self.transformation = Transformation()
         self.running = False
 
         # Subscribers and publishers
-        self.speed_sub = self.create_subscription(CameraSpeed, 'camera_speed', self.speed_callback, 10)
         self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
         self.start_sub = self.create_subscription(Save, 'start_report', self.start_running, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)
@@ -156,36 +140,6 @@ class Camera(Node):
     def start_running(self, msg):
         self.running = True
 
-    def speed_callback(self, msg):
-        now = self.get_clock().now()
-        dt = now - self.last_servo_move
-        self.last_servo_move = now
-
-        # Reset servos to neutral position
-        if msg.reset:
-            self.camera_position = [0, 0]
-            self.servo_x.reset()
-            self.servo_y.reset()
-            return
-
-        x_speed = self.MAX_CAMERA_SPEED * msg.wx
-        y_speed = self.MAX_CAMERA_SPEED * msg.wy
-
-        dx = x_speed * dt
-        dy = y_speed * dt
-
-        x = self.servo_x.angle + dx
-        y = self.servo_y.angle + dy
-
-        if abs(x) > self.MAX_CAMERA_RANGE:
-            x = math.copysign(self.MAX_CAMERA_RANGE, x)
-        if abs(y) > self.MAX_CAMERA_RANGE:
-            y = math.copysign(self.MAX_CAMERA_RANGE, y)
-
-        self.camera_position = [x, y]
-        self.servo_x.set_angle(self.START_CAMERA_ANGLE + x)
-        self.servo_y.set_angle(self.START_CAMERA_ANGLE + y)
-
     def position_callback(self, msg):
         translation = [msg.x, msg.y, msg.z]
         self.transformation.translation = translation
@@ -279,7 +233,7 @@ class Camera(Node):
         q1_points = points[(points[:, 0] > 0) & (points[:, 1] > 0)]
         q1_centre = np.array((np.average(q1_points[:, 0]), np.average(q1_points[:, 1])))
         q2_points = points[(points[:, 0] < 0) & (points[:, 1] > 0)]
-        q2_centre = np.array((np.average(q1_points[:, 0]), np.average(q1_points[:, 1])))
+        q2_centre = np.array((np.average(q2_points[:, 0]), np.average(q2_points[:, 1])))
         q3_points = points[(points[:, 0] < 0) & (points[:, 1] < 0)]
         q3_centre = np.array((np.average(q3_points[:, 0]), np.average(q3_points[:, 1])))
         q4_points = points[(points[:, 0] > 0) & (points[:, 1] < 0)]
@@ -334,7 +288,6 @@ class Camera(Node):
 def main(args=None):
     rclpy.init(args=args)
     try:
-        GPIO.setmode(GPIO.BCM)
         camera = Camera()
         with dai.Device(camera.pipeline) as device:
             camera.get_logger().info("Device connected")
@@ -359,7 +312,7 @@ def main(args=None):
             #     # points = in_pointcloud.getPoints()
             #     # camera.broadcast_pointcloud_frame(points, frame)
 
-            #     rclpy.spin_once(camera)
+                rclpy.spin_once(camera)
     finally:
         camera.destroy_node()
         rclpy.shutdown()

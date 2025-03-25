@@ -1,12 +1,12 @@
 camera:
   ros__parameters:
-    max_camera_speed: 0.5 # degrees/sec
-    max_camera_range: 20
-    starting_camera_angle: 90
     fps: 30
 
 device_controller:
   ros__parameters:
+    max_camera_speed: 0.5 # degrees/sec
+    max_camera_range: 20
+    starting_camera_angle: 90
     max_rpm: 10 # rpm
     radius: 0.02247 # m
     length: 0.149 # m
