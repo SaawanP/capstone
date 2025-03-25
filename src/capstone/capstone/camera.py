@@ -43,8 +43,8 @@ class Camera(Node):
         self.seen_defects = []
 
         # Servo setup
-        self.servo_x = Servo(17, self.START_CAMERA_ANGLE)
-        self.servo_y = Servo(27, self.START_CAMERA_ANGLE)
+        self.servo_x = Servo(17, self.START_CAMERA_ANGLE, logger=self.get_logger())
+        self.servo_y = Servo(27, self.START_CAMERA_ANGLE, logger=self.get_logger())
         self.last_servo_move = self.get_clock().now()
         self.camera_position = [0, 0]
         self.transformation = Transformation()
@@ -53,7 +53,7 @@ class Camera(Node):
         # Subscribers and publishers
         self.speed_sub = self.create_subscription(CameraSpeed, 'camera_speed', self.speed_callback, 10)
         self.position_sub = self.create_subscription(Vector3, 'position', self.position_callback, 10)
-        self.start_sub = self.create_subscription(Save, 'start_report', self.start_runnning, 10)
+        self.start_sub = self.create_subscription(Save, 'start_report', self.start_running, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)
 
         # TODO test using https://wiki.ros.org/image_view
@@ -153,7 +153,7 @@ class Camera(Node):
         xout_rgb.setStreamName("rgb")
         cam_rgb.video.link(xout_rgb.input)
 
-    def start_runnning(self, msg):
+    def start_running(self, msg):
         self.running = True
 
     def speed_callback(self, msg):
@@ -162,7 +162,7 @@ class Camera(Node):
         self.last_servo_move = now
 
         # Reset servos to neutral position
-        if msg.reset == True:
+        if msg.reset:
             self.camera_position = [0, 0]
             self.servo_x.reset()
             self.servo_y.reset()
