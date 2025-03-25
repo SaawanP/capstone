@@ -14,19 +14,12 @@ def generate_launch_description():
         'robot_launch.yaml'
     )
 
-    camera_node = Node(
-        package="capstone",
-        executable="camera",
-        parameters=[robot_config]
-    )
     device_controller = Node(
         package="capstone",
         executable="device_controller",
         parameters=[robot_config]
     )
 
-
-    ld.add_action(camera_node)
     ld.add_action(device_controller)
 
     return ld

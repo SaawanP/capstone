@@ -28,7 +28,14 @@ def generate_launch_description():
         package="joy",
         executable="joy_node",
     )
-    
+
+    # Define the camera node
+    camera_node = Node(
+        package="capstone",
+        executable="camera",
+        parameters=[host_config]
+    )
+
     # Define the path to the app's main.py
     app_main_path = os.path.join(pkg_dir, 'app', 'main.py')
     
@@ -44,5 +51,6 @@ def generate_launch_description():
     ld.add_action(joy_node)
     ld.add_action(app_process)
     ld.add_action(brain_node)
+    ld.add_action(camera_node)
 
     return ld

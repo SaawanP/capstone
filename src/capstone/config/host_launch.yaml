@@ -2,3 +2,7 @@ brain:
   ros__parameters:
     max_speed: 1.412 # m/min, ensure that max_rpm * circ = max_speed
     max_track_angle: 40
+
+camera:
+  ros__parameters:
+    fps: 30
