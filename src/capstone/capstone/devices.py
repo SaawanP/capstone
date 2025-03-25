@@ -145,12 +145,14 @@ class Servo:
     def shutdown(self):
         self.pwm.stop()
 
+
 class LED:
-    def __init__(self, pin):
+    def __init__(self, pin, logger=None):
         self.pin = pin
         GPIO.setup(pin,GPIO.OUT)
         self.pwm = GPIO.PWM(self.pin, 50)
         self.pwm.start(0)
+        self.logger = logger
 
     def set_state(self, state):
         if state:
@@ -160,3 +162,5 @@ class LED:
 
     def set_level(self, level):
         self.pwm.ChangeDutyCycle(level)
+        if self.logger:
+            self.logger.info(f"duty for lights {level}")

@@ -61,7 +61,7 @@ class DeviceController(Node):
         self.servo_track = Servo(22, logger=self.get_logger())
 
         # Led
-        self.led = LED(25)
+        self.led = LED(25, self.get_logger())
 
 
     def speed_callback(self, msg):
