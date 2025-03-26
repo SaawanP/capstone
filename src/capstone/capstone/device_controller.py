@@ -28,7 +28,6 @@ class DeviceController(Node):
         self.declare_parameter('Ki', 1.0)
         self.declare_parameter('Kd', 1.0)
 
-        # TODO move parameters to ROS param
         self.MAX_CAMERA_SPEED = self.get_parameter('max_camera_speed').get_parameter_value().double_value
         self.MAX_CAMERA_RANGE = self.get_parameter('max_camera_range').get_parameter_value().integer_value
         self.START_CAMERA_ANGLE = self.get_parameter('starting_camera_angle').get_parameter_value().integer_value
@@ -58,7 +57,7 @@ class DeviceController(Node):
         self.position = Vector3()
 
         # PID setup
-        timer_period = 0.1  # s TODO find best period
+        timer_period = 0.1  # s
         self.PID_left = PID(self.M_left, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
         self.PID_right = PID(self.M_right, timer_period, kp=self.Kp, kd=self.Kd, ki=self.Ki)
         # self.PID_timer = self.create_timer(timer_period, self.PID_controller)
