@@ -48,8 +48,8 @@ class DeviceController(Node):
         self.position_pub = self.create_publisher(Vector3, 'position', 10)
 
         # Motor setup
-        self.M_left = Motor(5, 6, 13, 19, 26, self.MAX_RPM)
-        self.M_right = Motor(14, 15, 18, 23, 24, self.MAX_RPM)
+        self.M_left = Motor(2, 3, 13, 19, 26, self.MAX_RPM, logger=self.get_logger())
+        self.M_right = Motor(14, 15, 18, 23, 24, self.MAX_RPM, logger=self.get_logger())
         self.left_rpm = 0
         self.right_rpm = 0
         self.angle = 0
@@ -67,8 +67,8 @@ class DeviceController(Node):
         self.servo_track = Servo(22)
 
         # Camera setup
-        self.servo_x = Servo(17, self.START_CAMERA_ANGLE, logger=self.get_logger())
-        self.servo_y = Servo(27, self.START_CAMERA_ANGLE, logger=self.get_logger())
+        self.servo_x = Servo(17, self.START_CAMERA_ANGLE)
+        self.servo_y = Servo(27, self.START_CAMERA_ANGLE)
         self.last_servo_move = self.get_clock().now()
 
         # Led

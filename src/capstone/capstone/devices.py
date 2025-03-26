@@ -56,14 +56,14 @@ class Motor:
     def set_rpm(self, rpm):
         duty = self.convert_to_duty(abs(rpm))
         self.pwm.ChangeDutyCycle(duty)
-        if self.logger:
-            pass
         if rpm > 0:
             GPIO.output(self.in1, 1)
             GPIO.output(self.in2, 0)
         else:
             GPIO.output(self.in1, 0)
             GPIO.output(self.in2, 1)
+        if self.logger:
+            self.logger.info(f"motor rpm {rpm}")
 
     def shutdown(self):
         self.pwm.stop()
