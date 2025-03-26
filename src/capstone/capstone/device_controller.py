@@ -49,7 +49,7 @@ class DeviceController(Node):
 
         # Motor setup
         self.M_left = Motor(5, 6, 13, 19, 26, self.MAX_RPM)
-        self.M_right = Motor(14, 15, 18, 23, 24, self.MAX_RPM)
+        self.M_right = Motor(15, 14, 18, 23, 24, self.MAX_RPM)
         self.left_rpm = 0
         self.right_rpm = 0
         self.angle = 0
