@@ -62,17 +62,14 @@ class Brain(Node):
         # self.h5_file = h5py.File(h5_filename, 'a')
 
     def joy_callback(self, msg: Joy):
-        if not self.running:
-            return
-
         # All values are -1 to 1
         robot_speed = RobotSpeed()
         robot_speed.header.stamp = msg.header.stamp
         if msg.axes[5] != 0:
             robot_speed.speed = 1
-            robot_speed.direction = math.copysign(1, msg.axes[5])
+            robot_speed.direction = int(math.copysign(1, msg.axes[5]))
         if msg.axes[4] != 0:
-            robot_speed.pivot_direction = math.copysign(1, msg.axes[4])
+            robot_speed.pivot_direction = int(math.copysign(1, msg.axes[4]))
 
         if msg.buttons[0] == 1:
             self.light_level += 5
@@ -80,7 +77,7 @@ class Brain(Node):
         if msg.buttons[3] == 1:
             self.light_level -= 5
             self.light_level = max(self.light_level, 0)
-        robot_speed.lights = self.light_level
+        robot_speed.lights = int(self.light_level)
 
         if msg.buttons[1] == 1:
             self.track_angle += 5
