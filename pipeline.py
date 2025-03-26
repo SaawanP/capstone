@@ -13,6 +13,7 @@ import depthai as dai
 import numpy as np
 import time
 import open3d as o3d
+
 # Blob path
 nnBlobPath = str((Path(__file__).parent / Path('yolov8ntrained_openvino_2022.1_5shave.blob')).resolve().absolute())
 
@@ -37,8 +38,6 @@ if not Path(nnBlobPath).exists():
     raise FileNotFoundError(f'Required file/s not found, please run "{sys.executable} install_requirements.py"')
 
 labelMap = ["blockage", "blowout", "crack"]
-
-syncNN = True
 
 # Create pipeline
 pipeline = dai.Pipeline()
@@ -120,10 +119,7 @@ monoLeft.out.link(stereo.left)
 monoRight.out.link(stereo.right)
 
 camRgb.preview.link(spatialDetectionNetwork.input)
-if syncNN:
-    spatialDetectionNetwork.passthrough.link(xoutRgb.input)
-else:
-    camRgb.preview.link(xoutRgb.input)
+spatialDetectionNetwork.passthrough.link(xoutRgb.input)
 
 spatialDetectionNetwork.out.link(xoutNN.input)
 
@@ -302,22 +298,16 @@ with dai.Device(pipeline) as device:
         height = frame.shape[0]
         width  = frame.shape[1]
         for detection in detections:
-          
-    
-
-
             x1 = int(detection.xmin * width)
-            x2 = int(detection.xmax * width )
-            y1 = int(detection.ymin * height )
+            y1 = int(detection.ymin * height)
+            x2 = int(detection.xmax * width)
             y2 = int(detection.ymax * height)
 
-            import cv2
 
             # Define colors
             label_color = (0, 255, 255)     # Yellow for label
             label_bg_color = (0, 0, 0)      # Black background for highlight
-            text_color = (0, 0, 255)   
-                 # Red for coordinates
+            text_color = (0, 0, 255)   # Red for coordinates
 
             # Draw label with background
             label_text = f"{labelMap[detection.label]}"

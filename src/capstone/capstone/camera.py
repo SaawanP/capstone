@@ -13,19 +13,34 @@ from std_msgs.msg import Header
 import depthai as dai
 import cv2
 from pathlib import Path
-import math
+import open3d as o3d
 import numpy as np
 import struct
-
+import time
 from capstone.transformation_matrix import Transformation
 
+FPS = 12
+class FPSCounter:
+    def __init__(self):
+        self.frameCount = 0
+        self.fps = 0
+        self.startTime = time.time()
+
+    def tick(self):
+        self.frameCount += 1
+        if self.frameCount % 10 == 0:
+            elapsedTime = time.time() - self.startTime
+            self.fps = self.frameCount / elapsedTime
+            self.frameCount = 0
+            self.startTime = time.time()
+        return self.fps
 
 class Camera(Node):
     def __init__(self):
         super().__init__('camera')
 
         # Constants
-        self.declare_parameter('fps', 30)
+        self.declare_parameter('fps', 12)
 
         FPS = self.get_parameter('fps').get_parameter_value().integer_value
 
@@ -44,97 +59,102 @@ class Camera(Node):
         self.defect_pub = self.create_publisher(Defect, 'defect_location', 10)
         self.pointcloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
 
+        # Blob path
+        nnBlobPath = str((Path('src/capstone/capstone') / Path('yolov8ntrained_openvino_2022.1_5shave.blob')).resolve())
+        self.get_logger().info(f"nn path: {nnBlobPath}")
+        if not Path(nnBlobPath).exists():
+            raise FileNotFoundError(f'Required file/s not found, {Path(nnBlobPath)}"')
+
+        self.label_map = ["blockage", "blowout", "crack"]
+
         # Camera Pipeline Setup
         self.pipeline = dai.Pipeline()
 
-        """
-        camRGB = self.pipeline.create(dai.node.ColorCamera)
-        mono_left = self.pipeline.create(dai.node.MonoCamera)
-        mono_right = self.pipeline.create(dai.node.MonoCamera)
-        depth = self.pipeline.create(dai.node.StereoDepth)
+        # Define sources and outputs
+        camRgb = self.pipeline.create(dai.node.ColorCamera)
+        spatialDetectionNetwork = self.pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+        monoLeft = self.pipeline.create(dai.node.MonoCamera)
+        monoRight = self.pipeline.create(dai.node.MonoCamera)
+        stereo = self.pipeline.create(dai.node.StereoDepth)
         pointcloud = self.pipeline.create(dai.node.PointCloud)
-        nn = self.pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+        nnNetworkOut = self.pipeline.create(dai.node.XLinkOut)
 
-        nn_xout = self.pipeline.create(dai.node.XLinkOut)
-        rgb_xout = self.pipeline.create(dai.node.XLinkOut)
-        pcl_xout = self.pipeline.create(dai.node.XLinkOut)
+        xoutRgb = self.pipeline.create(dai.node.XLinkOut)
+        xoutNN = self.pipeline.create(dai.node.XLinkOut)
+        xoutPoint= self.pipeline.create(dai.node.XLinkOut)
 
-        nnPath = str((Path(__file__).parent / Path('../models/.blob')).resolve().absolute())  # TODO change to current
+        xoutRgb.setStreamName("rgb")
+        xoutNN.setStreamName("detections")
+        xoutPoint.setStreamName("pc")
+        nnNetworkOut.setStreamName("nnNetwork")
 
-        # Camera settings
-        camRGB.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-        camRGB.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-        camRGB.setInterleaved(False)
-        camRGB.setPreviewSize(300, 300)  # TODO change to neural network dimensions
-        camRGB.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-        camRGB.setFps(FPS)
+        camRgb.setPreviewSize(640, 640)
+        camRgb.setFps(FPS)
+        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setInterleaved(False)
+        camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-        mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_left.setCamera("left")
-        mono_left.setFps(FPS)
-        mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        mono_right.setCamera("right")
-        mono_right.setFps(FPS)
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoLeft.setCamera("left")
+        monoLeft.setFps(FPS)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        monoRight.setCamera("right")
+        monoRight.setFps(FPS)
 
-        # Stereo Settings
-        depth.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-        depth.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
-        depth.setLeftRightCheck(True)
-        depth.setExtendedDisparity(False)
-        depth.setSubpixel(False)
-        depth.setOutputSize(mono_left.getResolutionWidth(), mono_left.getResolutionHeight())
-        depth.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+        stereo.initialConfig.setLeftRightCheckThreshold(5)
+        stereo.initialConfig.setConfidenceThreshold(5)
+        stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        stereo.initialConfig.setMedianFilter(dai.MedianFilter.KERNEL_7x7)
+        stereo.setLeftRightCheck(True)
+        stereo.setExtendedDisparity(False)
+        stereo.setSubpixel(False)
 
-        # YOLO settings
-        nn.setBlobPath(nnPath)
-        nn.setConfidenceThreshold(0.5)
-        nn.setNumClasses(80)
-        nn.setCoordinateSize(4)
-        nn.setIouThreshold(0.5)
-        nn.setNumInferenceThreads(2)
-        nn.input.setBlocking(False)
+        # Align depth map to the perspective of RGB camera, on which inference is done
+        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
+        stereo.setOutputSize(monoLeft.getResolutionWidth(), monoLeft.getResolutionHeight())
 
-        # Spatial settings
-        nn.setBoundingBoxScaleFactor(0.5)
-        nn.setDepthLowerThreshold(100)
-        nn.setDepthUpperThreshold(5000)
+        # Spatial network configs
+        spatialDetectionNetwork.setBlobPath(nnBlobPath)
+        spatialDetectionNetwork.setConfidenceThreshold(0.3)
+        spatialDetectionNetwork.input.setBlocking(False)
+        spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
+        spatialDetectionNetwork.setDepthLowerThreshold(100)
+        spatialDetectionNetwork.setDepthUpperThreshold(5000)
 
-        # Pipeline Linking
-        mono_left.out.link(depth.left)
-        mono_right.out.link(depth.right)
-        camRGB.preview.link(nn.input)
-        depth.depth.link(nn.inputDepth)
-        nn.passthroughDepth.link(pointcloud.inputDepth)
-        nn.passthrough.link(rgb_xout.input)
-        nn.out.link(nn_xout.input)
-        pointcloud.outputPointCloud.link(pcl_xout.input)
+        # Yolo specific parameters
+        spatialDetectionNetwork.setNumClasses(3)
+        spatialDetectionNetwork.setCoordinateSize(4)
+        spatialDetectionNetwork.setAnchors([10,14, 23,27, 37,58, 81,82, 135,169, 344,319])
+        spatialDetectionNetwork.setAnchorMasks({ "side26": [1,2,3], "side13": [3,4,5] })
+        spatialDetectionNetwork.setIouThreshold(0.5)
 
-        rgb_xout.setStreamName("rgb")
-        nn_xout.setStreamName("detections")
-        pcl_xout.setStreamName("pcl")
-        """
-        """
-        Linking Diagram:
+        spatialDetectionNetwork.setNumNCEPerInferenceThread(2)
 
-                                          ----.out-------------------------->nn_xout
-        camRGB--------------------->nn----|----.passthrough----------------->rgb_xout
-                               |          |
-        mono_left---|          |          |
-                    --->depth--|          --.passthroughDepth-->pointcloud-->pcl_xout
-        mono_right--|
+        # Linking
+        monoLeft.out.link(stereo.left)
+        monoRight.out.link(stereo.right)
 
-        """
+        camRgb.preview.link(spatialDetectionNetwork.input)
+        spatialDetectionNetwork.passthrough.link(xoutRgb.input)
+
+        spatialDetectionNetwork.out.link(xoutNN.input)
+
+        stereo.depth.link(spatialDetectionNetwork.inputDepth)
+        stereo.depth.link(pointcloud.inputDepth)
+
+        spatialDetectionNetwork.outNetwork.link(nnNetworkOut.input)
+        pointcloud.outputPointCloud.link(xoutPoint.input)
 
         # Dummy Pipeline
         # Define the color camera
-        cam_rgb = self.pipeline.create(dai.node.ColorCamera)
-        cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-        cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-
-        # Create output stream
-        xout_rgb = self.pipeline.create(dai.node.XLinkOut)  # Fixed typo: XaLinkOut -> XLinkOut
-        xout_rgb.setStreamName("rgb")
-        cam_rgb.video.link(xout_rgb.input)
+        # cam_rgb = self.pipeline.create(dai.node.ColorCamera)
+        # cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+        # cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        #
+        # # Create output stream
+        # xout_rgb = self.pipeline.create(dai.node.XLinkOut)  # Fixed typo: XaLinkOut -> XLinkOut
+        # xout_rgb.setStreamName("rgb")
+        # cam_rgb.video.link(xout_rgb.input)
 
     def start_running(self, msg):
         self.running = True
@@ -179,8 +199,6 @@ class Camera(Node):
 
             return False
 
-        point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
-        ind, dist = get_closest_seen_defect(point)
         height = frame.shape[0]
         width = frame.shape[1]
         # Denormalize bounding box
@@ -189,12 +207,15 @@ class Camera(Node):
         y1 = int(detection.ymin * height)
         y2 = int(detection.ymax * height)
 
-        if dist < 0.5 and ind != -1:  # TODO fix threshold value
-            self.seen_defects[ind] = point
-            if is_near_frame_edge():
-                del self.seen_defects[ind]
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
-            return frame
+        # Filter out repeats
+        # point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
+        # ind, dist = get_closest_seen_defect(point)
+        # if dist < 0.5 and ind != -1:  # TODO fix threshold value
+        #     self.seen_defects[ind] = point
+        #     if is_near_frame_edge():
+        #         del self.seen_defects[ind]
+        #     cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
+        #     return frame
 
         defect = Defect()
         point = [detection.spatialCoordinates.x, detection.spatialCoordinates.y, detection.spatialCoordinates.z]
@@ -202,14 +223,33 @@ class Camera(Node):
         defect.location.x = point[0]
         defect.location.y = point[1]
         defect.location.z = point[2]
-
         roi = frame[y1:y2, x1:x2]
         defect.image = self.bridge.cv2_to_imgmsg(roi)
         self.defect_pub.publish(defect)
         self.seen_defects.append(point)
 
-        # Add bounding box to rbg image
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255))
+        # Format frame with bounding boxes
+        # Define colors
+        label_color = (0, 255, 255)  # Yellow for label
+        label_bg_color = (0, 0, 0)  # Black background for highlight
+        text_color = (0, 0, 255)  # Red for coordinates
+
+        # Draw label with background
+        label_text = f"{self.label_map[detection.label]}"
+        (text_width, text_height), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_TRIPLEX, 1.0, 2)
+        cv2.rectangle(frame, (x1 + 30, y1 + 15 - text_height), (x1 + 10 + text_width, y1 + 15 + 5), label_bg_color, -1)
+        cv2.putText(frame, label_text, (x1 + 30, y1 + 15), cv2.FONT_HERSHEY_TRIPLEX, 1.0, label_color, 2)
+
+        # Draw coordinates in red
+        cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (x1 + 25, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX,
+                    0.5, text_color, 2)
+        cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (x1 + 25, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX,
+                    0.5, text_color, 2)
+        cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (x1 + 25, y1 + 110),
+                    cv2.FONT_HERSHEY_TRIPLEX, 0.5, text_color, 2)
+
+        # Draw rectangle
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255,255,255), 2)
         return frame
 
     def broadcast_pointcloud_frame(self, pointcloud, frame):
@@ -222,8 +262,6 @@ class Camera(Node):
         # Filter based on distances
         distances = points[:, 2]
         counts, bin_edges = np.histogram(distances, bins=100, density=False)
-        # changes = [counts[i] - counts[i + 1] for i in range(len(counts) - 1)]
-        # max_dist = bin_edges[np.argmax(changes[1:]) + 2]
         max_dist = bin_edges[2]
         # Apply max_dist filtering
         valid_points_mask = points[:, 2] <= max_dist
@@ -240,19 +278,24 @@ class Camera(Node):
         q4_centre = np.array((np.average(q4_points[:, 0]), np.average(q4_points[:, 1])))
         centre = (q1_centre + q2_centre + q3_centre + q4_centre) / 4
         radial_distance = np.sqrt((points[:, 0] - centre[0]) ** 2 + (points[:, 1] - centre[1]) ** 2)
-        rad_count, rad_bin_edges = np.histogram(radial_distance, bins=100, density=False)
 
-        diff_counts = np.diff(rad_count)
-        threshold = np.mean(diff_counts) + np.std(diff_counts)
-        big_jump_indices = np.where(diff_counts > threshold)[0]  # Get indices where jump is large
+        radius_mask = [1] * len(points)
+        try:
+            rad_count, rad_bin_edges = np.histogram(radial_distance, bins=100, density=False)
 
-        if len(big_jump_indices) >= 2:
-            first_jump_idx, second_jump_idx = big_jump_indices[:2]
-            first_jump_bin = rad_bin_edges[first_jump_idx - 1]
-            second_jump_bin = rad_bin_edges[second_jump_idx + 3]
+            diff_counts = np.diff(rad_count)
+            threshold = np.mean(diff_counts) + np.std(diff_counts)
+            big_jump_indices = np.where(diff_counts > threshold)[0]  # Get indices where jump is large
 
-        radius_mask = radial_distance <= second_jump_bin
-        points = points[radius_mask]
+            if len(big_jump_indices) >= 2:
+                first_jump_idx, second_jump_idx = big_jump_indices[:2]
+                first_jump_bin = rad_bin_edges[first_jump_idx - 1]
+                second_jump_bin = rad_bin_edges[second_jump_idx + 3]
+
+            radius_mask = radial_distance <= second_jump_bin
+            points = points[radius_mask]
+        except ValueError:
+            pass
 
         # Ensure colors are filtered accordingly
         colors = (frame.reshape(-1, 3) / 255.0).astype(np.float64)
@@ -260,6 +303,7 @@ class Camera(Node):
         colors = colors[valid_points_mask]
         colors = colors[radius_mask]
 
+        # Publish pointcloud data
         combined_colors = []
         for color in colors:
             r, g, b = color
@@ -282,39 +326,72 @@ class Camera(Node):
         ros_pc = pc2.create_cloud(header, fields, pc)
         self.pointcloud_pub.publish(ros_pc)
 
+        return points, colors
+
     def complete_run(self, msg):
         self.running = False
 
 def main(args=None):
     rclpy.init(args=args)
+    camera = Camera()
     try:
-        camera = Camera()
         with dai.Device(camera.pipeline) as device:
+            isRunning = True
+            def key_callback(vis, action, mods):
+                global isRunning
+                if action == 0:
+                    isRunning = False
+
+            # Output queues will be used to get the rgb frames and nn data from the outputs defined above
             camera.get_logger().info("Device connected")
             q_RGB = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-            # q_detections = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
-            # q_pointcloud = device.getOutputQueue(name="pcl", maxSize=4, blocking=False)
+            detectionNNQueue = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+            pcQueue = device.getOutputQueue(name="pc", maxSize=4, blocking=False)
+            networkQueue = device.getOutputQueue(name="nnNetwork", maxSize=4, blocking=False)
 
-            # while not camera.running:
-            #     camera.get_logger().info("Waiting to start camera", throttle_duration_sec=1)
+            vis = o3d.visualization.VisualizerWithKeyCallback()
+            vis.create_window()
+            vis.register_key_action_callback(81, key_callback)
+            pcd = o3d.geometry.PointCloud()
+            coordinateFrame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=100, origin=[0, 0, 0])
+            vis.add_geometry(coordinateFrame)
 
+            first = True
             while rclpy.ok():
                 in_rgb = q_RGB.get()
-                # in_detections = q_detections.get()
-                # in_pointcloud = q_pointcloud.get()
+                inMessage = pcQueue.get()
+                in_pointcloud = inMessage
+                in_detections = detectionNNQueue.get()
 
                 frame = in_rgb.getCvFrame()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                # detections = in_detections.detections
-                # for detection in detections:
-                #     frame = camera.broadcast_defect(detection, frame)
+                detections = in_detections.detections
+                for detection in detections:
+                    frame = camera.broadcast_defect(detection, frame)
 
                 camera.broadcast_frame(frame)
-
-                # points = in_pointcloud.getPoints()
-                # camera.broadcast_pointcloud_frame(points, frame)
+                points, colors = camera.broadcast_pointcloud_frame(in_pointcloud, frame)
                 rclpy.spin_once(camera, timeout_sec=0.1)
+
+                # Update visulizers
+                cv2.namedWindow("rgb", cv2.WINDOW_NORMAL)
+                cv2.imshow("rgb", frame)
+
+                pcd.points = o3d.utility.Vector3dVector(points)
+                pcd.colors = o3d.utility.Vector3dVector(colors)
+                if first:
+                    vis.add_geometry(pcd)
+                    first = False
+                else:
+                    vis.update_geometry(pcd)
+
+                vis.poll_events()
+                vis.update_renderer()
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            vis.destroy_window()
+
     finally:
         camera.destroy_node()
         rclpy.shutdown()
