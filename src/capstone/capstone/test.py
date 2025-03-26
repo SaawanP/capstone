@@ -40,11 +40,11 @@ def is_yellow_point(point_color, tolerance=0.2):
 
 # Dictionary to map yellow points to specific images
 yellow_point_images = {
-    3637: "C:/Users/varun/Downloads/blockage.png",    # Example image path for first point
-    9066: "C:/Users/varun/Downloads/blockage2.png",   # Different image for second point
-    14417: "C:/Users/varun/Downloads/crack.png",   # Different image for third point
-    24396: "C:/Users/varun/Downloads/blowout.png",   # Different image for fourth point
-    35430: "C:/Users/varun/Downloads/play-circle.png"    # Different image for fifth point
+    3637: "blockage.png",    # Example image path for first point
+    9066: "blockage2.png",   # Different image for second point
+    14417: "crack.png",   # Different image for third point
+    24396: "blowout.png",   # Different image for fourth point
+    35430: "crack.png"    # Different image for fifth point
 }
 def on_pick(event):
     # Get the picked point indices
