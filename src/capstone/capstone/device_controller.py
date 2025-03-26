@@ -75,23 +75,26 @@ class DeviceController(Node):
         self.led = LED(25)
 
     def camera_speed_callback(self, msg):
-        now = self.get_clock().now()
-        dt = now - self.last_servo_move
-        self.last_servo_move = now
+        # now = self.get_clock().now()
+        # dt = now - self.last_servo_move
+        # self.last_servo_move = now
+        #
+        # x_speed = self.MAX_CAMERA_SPEED * msg.wx
+        # y_speed = self.MAX_CAMERA_SPEED * msg.wy
+        #
+        # dx = x_speed * 1000000000 * dt.nanoseconds
+        # dy = y_speed * 1000000000 * dt.nanoseconds
+        #
+        # x = self.servo_x.angle + dx
+        # y = self.servo_y.angle + dy
+        #
+        # if abs(x) > self.MAX_CAMERA_RANGE:
+        #     x = math.copysign(self.MAX_CAMERA_RANGE, x)
+        # if abs(y) > self.MAX_CAMERA_RANGE:
+        #     y = math.copysign(self.MAX_CAMERA_RANGE, y)
 
-        x_speed = self.MAX_CAMERA_SPEED * msg.wx
-        y_speed = self.MAX_CAMERA_SPEED * msg.wy
-
-        dx = x_speed * 1000000000 * dt.nanoseconds
-        dy = y_speed * 1000000000 * dt.nanoseconds
-
-        x = self.servo_x.angle + dx
-        y = self.servo_y.angle + dy
-
-        if abs(x) > self.MAX_CAMERA_RANGE:
-            x = math.copysign(self.MAX_CAMERA_RANGE, x)
-        if abs(y) > self.MAX_CAMERA_RANGE:
-            y = math.copysign(self.MAX_CAMERA_RANGE, y)
+        x = msg.wx * self.MAX_CAMERA_RANGE
+        y = msg.wy * self.MAX_CAMERA_RANGE
 
         self.servo_x.set_angle(self.START_CAMERA_ANGLE + x)
         self.servo_y.set_angle(self.START_CAMERA_ANGLE + y)
