@@ -75,6 +75,7 @@ class DeviceController(Node):
         self.led = LED(25)
 
     def camera_speed_callback(self, msg):
+        return
         now = self.get_clock().now()
         dt = now - self.last_servo_move
         self.last_servo_move = now
