@@ -67,9 +67,15 @@ class Brain(Node):
 
         # All values are -1 to 1
         robot_speed = RobotSpeed()
+<<<<<<< Updated upstream
         robot_speed.header.stamp = msg.header.stamp
         vx = msg.axes[3]
         vy = msg.axes[2]
+=======
+        vx = 0
+        vy = 0
+        vx = msg.axes[2] / self.JOY_RANGE
+>>>>>>> Stashed changes
         robot_speed.direction = math.copysign(1, vx)
         robot_speed.turning_radius = vx
         robot_speed.speed = min(math.sqrt(vx ** 2 + vy ** 2), 1.0)
@@ -93,8 +99,14 @@ class Brain(Node):
         self.robot_speed_pub.publish(robot_speed)
 
         camera_speed = CameraSpeed()
+<<<<<<< Updated upstream
         camera_speed.wx = msg.axes[0]
         camera_speed.wy = msg.axes[1]
+=======
+        camera_speed.reset = False
+        camera_speed.wx = msg.axes[0] / self.JOY_RANGE
+        camera_speed.wy = msg.axes[1] / self.JOY_RANGE
+>>>>>>> Stashed changes
         self.camera_speed_pub.publish(camera_speed)
 
     def pointcloud_callback(self, msg: PointCloud2):

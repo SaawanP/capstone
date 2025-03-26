@@ -40,7 +40,6 @@ class Camera(Node):
         self.start_sub = self.create_subscription(Save, 'start_report', self.start_running, 10)
         self.save_sub = self.create_subscription(Save, 'save_report', self.complete_run, 10)
 
-        # TODO test using https://wiki.ros.org/image_view
         self.rgb_pub = self.create_publisher(Image, 'image_stream', 10)
         self.defect_pub = self.create_publisher(Defect, 'defect_location', 10)
         self.pointcloud_pub = self.create_publisher(PointCloud2, 'point_cloud', 10)
