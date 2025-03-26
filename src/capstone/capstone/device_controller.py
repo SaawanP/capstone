@@ -75,7 +75,6 @@ class DeviceController(Node):
         self.led = LED(25)
 
     def camera_speed_callback(self, msg):
-        return
         now = self.get_clock().now()
         dt = now - self.last_servo_move
         self.last_servo_move = now
@@ -83,8 +82,8 @@ class DeviceController(Node):
         x_speed = self.MAX_CAMERA_SPEED * msg.wx
         y_speed = self.MAX_CAMERA_SPEED * msg.wy
 
-        dx = x_speed * dt
-        dy = y_speed * dt
+        dx = x_speed * 1000000000 * dt.nanoseconds()
+        dy = y_speed * 1000000000 * dt.nanoseconds()
 
         x = self.servo_x.angle + dx
         y = self.servo_y.angle + dy
@@ -119,9 +118,9 @@ class DeviceController(Node):
         self.M_right.set_rpm(self.right_rpm)
         self.led.set_level(msg.lights)
         self.servo_track.set_angle(msg.track_angle)
-        self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
-        self.get_logger().info(f"lights state {msg.lights}")
-        self.get_logger().info(f"track angle {msg.track_angle}")
+        # self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
+        # self.get_logger().info(f"lights state {msg.lights}")
+        # self.get_logger().info(f"track angle {msg.track_angle}")
 
     def PID_controller(self):
         self.PID_left.set_target_rpm(self.left_rpm)
