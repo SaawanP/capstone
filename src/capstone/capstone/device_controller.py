@@ -121,7 +121,7 @@ class DeviceController(Node):
         self.M_right.set_rpm(self.right_rpm)
         self.led.set_level(msg.lights)
         self.servo_track.set_angle(msg.track_angle)
-        # self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
+        self.get_logger().info(f"right rpm: {self.right_rpm}, left rpm: {self.left_rpm}, direction: {msg.direction}")
         # self.get_logger().info(f"lights state {msg.lights}")
         # self.get_logger().info(f"track angle {msg.track_angle}")
 
