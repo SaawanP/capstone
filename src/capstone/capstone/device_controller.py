@@ -93,7 +93,7 @@ class DeviceController(Node):
         # if abs(y) > self.MAX_CAMERA_RANGE:
         #     y = math.copysign(self.MAX_CAMERA_RANGE, y)
 
-        x = msg.wx * self.MAX_CAMERA_RANGE
+        x = -msg.wx * self.MAX_CAMERA_RANGE
         y = msg.wy * self.MAX_CAMERA_RANGE
 
         self.servo_x.set_angle(self.START_CAMERA_ANGLE + x)
