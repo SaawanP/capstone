@@ -82,8 +82,8 @@ class DeviceController(Node):
         x_speed = self.MAX_CAMERA_SPEED * msg.wx
         y_speed = self.MAX_CAMERA_SPEED * msg.wy
 
-        dx = x_speed * 1000000000 * dt.nanoseconds()
-        dy = y_speed * 1000000000 * dt.nanoseconds()
+        dx = x_speed * 1000000000 * dt.nanoseconds
+        dy = y_speed * 1000000000 * dt.nanoseconds
 
         x = self.servo_x.angle + dx
         y = self.servo_y.angle + dy
